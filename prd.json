@@ -16,7 +16,7 @@
         "`docker compose config` validates the compose file without errors"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

@@ -1,3 +1,49 @@
 # Ralph Progress Log
 Started: Fri Jun 12 03:28:37 PM CEST 2026
 ---
+
+## Codebase Patterns
+- `php:8.5-fpm` already ships PDO core and Zend OPcache built in — only run
+  `docker-php-ext-install pdo_pgsql intl zip` (NOT `pdo` or `opcache`, those
+  fail with "cannot stat 'modules/*'" since they have no separate .so to copy).
+- backend/ is the Symfony app root (served via nginx from backend/public),
+  frontend/ is the Vite/React app root. Both are bind-mounted into their
+  containers so host edits are picked up live.
+- docker-compose.yml uses `${VAR:-default}` everywhere so the stack works
+  out of the box even without a `.env` file; `.env.example` documents all
+  overridable vars (DB creds, JWT key paths, CORS origin, ports, app URL).
+
+## 2026-06-12 - US-001
+- Implemented the Docker Compose stack: postgres (16-alpine, with healthcheck),
+  php (custom Dockerfile from php:8.5-fpm + pdo_pgsql/intl/zip extensions +
+  composer binary), nginx (1.27-alpine, fastcgi_pass to php:9000, serves
+  backend/public on port 8000), and node (20-alpine, runs `npm install &&
+  npm run dev -- --host 0.0.0.0` for Vite on port 5173).
+- Added minimal placeholder backend/public/index.php (JSON "ok" response) and
+  a minimal Vite project in frontend/ (package.json, vite.config.js,
+  index.html, src/main.js) so the stack builds and serves real responses
+  before US-002/US-003 scaffold the full Symfony and React apps.
+- Files changed: docker-compose.yml, docker/php/Dockerfile,
+  docker/nginx/default.conf, .env.example, .gitignore, README.md,
+  backend/public/index.php, frontend/{package.json,package-lock.json,
+  vite.config.js,index.html,src/main.js}
+- Verified: `docker compose config` validates cleanly; `docker compose up -d
+  --build` starts all 4 containers (postgres healthy, php-fpm ready, nginx
+  returns 200 JSON on :8000, Vite dev server returns the page on :5173); then
+  tore down with `docker compose down -v`.
+- **Learnings for future iterations:**
+  - Created the `ralph/hr-portal` branch from the unborn `master` branch via
+    `git checkout -b` (repo had only an "initial commit" with the agent
+    tooling files committed already).
+  - When US-002 scaffolds Symfony into backend/, keep the nginx
+    `docker/nginx/default.conf` fastcgi config as-is — it already targets
+    `php:9000` and `backend/public` correctly for a standard Symfony
+    front-controller setup.
+  - When US-003 scaffolds the full React app into frontend/, the minimal
+    package.json/vite.config.js/index.html created here can be
+    replaced/extended directly.
+  - `npm install` run inside the node container creates `frontend/node_modules`
+    owned by root on the host; if it needs removing, use
+    `docker run --rm -v "$(pwd)/frontend:/app" alpine rm -rf /app/node_modules`
+    rather than a plain `rm -rf` (permission denied on host).
+---
