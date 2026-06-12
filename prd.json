@@ -79,7 +79,7 @@
         "Tests pass (PHPUnit test confirms the admin user exists with ROLE_ADMIN after loading fixtures)"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

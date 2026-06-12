@@ -56,7 +56,7 @@ After loading fixtures, log in with:
 - **Email:** `admin@hr-portal.local`
 - **Password:** `admin123`
 
-(see `backend/src/DataFixtures` once US-005 is implemented)
+(see `backend/src/DataFixtures/AppFixtures.php`)
 
 ## Validating the Docker setup
 

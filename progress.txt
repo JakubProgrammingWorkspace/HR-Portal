@@ -3,6 +3,11 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
 ---
 
 ## Codebase Patterns
+- The php container sets `APP_ENV=dev` as a real OS environment variable
+  (docker-compose.yml), which takes precedence over phpunit.dist.xml's
+  `<server name="APP_ENV" value="test" force="true"/>`. Run tests with
+  `docker compose exec -e APP_ENV=test php bin/phpunit` (or
+  `bin/console ... --env=test` for console commands against the test DB).
 - `php:8.5-fpm` already ships PDO core and Zend OPcache built in — only run
   `docker-php-ext-install pdo_pgsql intl zip` (NOT `pdo` or `opcache`, those
   fail with "cannot stat 'modules/*'" since they have no separate .so to copy).
@@ -188,4 +193,44 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
     root-owned on the host bind mount - re-run
     `docker compose exec -u root php chown -R 1000:1000 /var/www/html`
     after every composer command (same as noted for US-002).
+---
+
+## 2026-06-12 - US-005
+- Installed `doctrine/doctrine-fixtures-bundle` (^4.3) and `symfony/test-pack`
+  (phpunit/phpunit 13.2, symfony/browser-kit, symfony/css-selector) as dev
+  dependencies; the test-pack recipe added phpunit.dist.xml, bin/phpunit,
+  .env.test, and tests/bootstrap.php.
+- src/DataFixtures/AppFixtures.php creates Role ROLE_ADMIN ("Administrator")
+  and ROLE_USER ("Użytkownik"), and a User admin@hr-portal.local /
+  "Admin Administrator" with ROLE_ADMIN assigned and password "admin123"
+  hashed via UserPasswordHasherInterface (injected into the fixture).
+- tests/DataFixtures/AppFixturesTest.php boots the kernel, purges + loads
+  AppFixtures via Doctrine's ORMExecutor/ORMPurger directly (no Alice/extra
+  bundle needed), then asserts the admin user exists, has ROLE_ADMIN in
+  getRoles(), and isActive() is true.
+- Created and migrated the `hr_portal_test` database
+  (`doctrine:database:create --env=test` +
+  `doctrine:migrations:migrate --env=test`).
+- Files changed: backend/{composer.json,composer.lock,symfony.lock,
+  .gitignore,.env.test,bin/phpunit,phpunit.dist.xml,
+  config/bundles.php,src/DataFixtures/AppFixtures.php,
+  tests/bootstrap.php,tests/DataFixtures/AppFixturesTest.php}, prd.json,
+  progress.txt.
+- Verified: `bin/console lint:container` OK, `php -l` clean on new files,
+  `bin/console doctrine:fixtures:load --no-interaction` runs cleanly against
+  the dev DB and produces the expected role/user/user_role rows (checked via
+  psql), and `docker compose exec -e APP_ENV=test php bin/phpunit` -> 1
+  test, 3 assertions, OK.
+- **Learnings for future iterations:**
+  - See the new "APP_ENV=dev vs test" bullet in Codebase Patterns above -
+    every future PHPUnit run needs the `-e APP_ENV=test` override (or an
+    equivalent env override), otherwise KernelTestCase::bootKernel() fails
+    with "Could not find service test.service_container".
+  - The test database (`hr_portal_test`) is separate from the dev database
+    and needs its own `doctrine:database:create`/`doctrine:migrations:migrate
+    --env=test` after adding new migrations.
+  - AppFixtures is autowired (constructor takes
+    UserPasswordHasherInterface), so it can be fetched directly from the test
+    container via `$container->get(AppFixtures::class)` - no need to
+    manually instantiate or wire dependencies in tests.
 ---
