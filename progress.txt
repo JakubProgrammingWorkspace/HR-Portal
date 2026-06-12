@@ -786,3 +786,59 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
     config - "(paginated)" in an AC doesn't require any special setup beyond
     not disabling pagination.
 ---
+
+## 2026-06-13 - US-015
+- Replaced the frontend/src/pages/EmployeesPage.tsx placeholder with a full
+  panel, following CompaniesPage's structure: on load, fetches GET
+  /api/employees and GET /api/companies (in parallel) and renders a table
+  (Imię i nazwisko, Telefon, E-mail, Adres, Firma - resolved from the
+  employee's `company` IRI via a Map built from the companies list - and
+  Akcje/Usuń), with a "Brak pracowników." empty-state row.
+- Added an always-visible "Dodaj pracownika" form above the table: Imię,
+  Nazwisko, PESEL, Telefon, E-mail, Firma (select populated from
+  /api/companies), Adres. Client-side validation mirrors EmployeeInput's
+  backend constraints (all NotBlank; PESEL must match `/^\d{11}$/` with the
+  exact backend message "PESEL musi składać się z 11 cyfr."; email must match
+  a simple `/^[^\s@]+@[^\s@]+\.[^\s@]+$/` pattern with the backend's "Adres
+  e-mail jest nieprawidłowy." message; Firma is required). On submit, POSTs
+  `{ ...fields, company: "/api/companies/{id}" }`; 422 responses map
+  `violations[].propertyPath` -> `.message` onto the same field-error slots
+  (extractFieldErrors, same helper pattern as CompaniesPage/UsersPage); other
+  errors show `detail` in a generic banner (extractErrorMessage).
+- Added a "Szukaj" text input (filters client-side on firstName/lastName,
+  case-insensitive substring match) and a "Firma" `<select>` filter (client-
+  side, matches the employee's company IRI by id) above the table - both
+  operate on the already-fetched `employees` array via a `useMemo`, no extra
+  API calls.
+- "Usuń" per row uses `window.confirm()` ("Czy na pewno usunąć pracownika
+  {firstName} {lastName}?") before DELETE /api/employees/{id}, then removes
+  the row from local state on 204.
+- Files changed: frontend/src/pages/EmployeesPage.tsx, prd.json, progress.txt.
+- Verified: `docker compose exec node npm run typecheck` passes (tsc
+  --noEmit, no errors). Used playwright-cli as admin@hr-portal.local:
+  /employees lists existing employees with their company name resolved via
+  the IRI map; added "Anna Nowak" linked to an existing company (TestCo) via
+  the form - appeared in the table and the form reset; the "Szukaj" input
+  filtering to "anna" showed only that row; clicked "Usuń" on her row, the
+  Polish confirm dialog showed "Czy na pewno usunąć pracownika Anna Nowak?",
+  accepting it removed the row. Created throwaway test data (1 company, 3
+  employees) directly via the API to have something to list/filter, then
+  deleted it all afterwards (DELETE returned 204 for each).
+- **Learnings for future iterations:**
+  - GET /api/employees with the `Accept: application/json` header (which is
+    what `apiFetch` effectively sends) returns a plain JSON array, same as
+    /api/companies and /api/users - `itemsPerPage`/pagination metadata is
+    only present for `application/ld+json` (Hydra `Collection` with `member`/
+    `totalItems`). So "(paginated)" in US-014's AC doesn't change the
+    frontend's response handling - `(await response.json()) as EmployeeRow[]`
+    works directly, same as CompaniesPage.
+  - For "search by name and filter by company" type ACs where the dataset is
+    small (HR portal scale), client-side filtering via `useMemo` over an
+    already-fetched array is simpler than wiring up SearchFilter query params
+    and is sufficient to satisfy the AC - no debouncing/refetching needed.
+  - To resolve a ManyToOne IRI field (e.g. Employee.company =
+    "/api/companies/5") to a display value, build a
+    `Map<string, string>` keyed by the full IRI (`` `/api/companies/${id}` ``)
+    from the related collection's list response - avoids per-row lookups or
+    N+1 requests.
+---

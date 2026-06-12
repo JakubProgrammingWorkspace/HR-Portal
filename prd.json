@@ -239,7 +239,7 @@
         "Verify in browser using the playwright-cli skill: add an employee linked to an existing company, see it in the list, then remove it"
       ],
       "priority": 15,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
