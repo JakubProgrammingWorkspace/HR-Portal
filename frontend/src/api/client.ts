@@ -22,6 +22,33 @@ export class ApiError extends Error {
   }
 }
 
+export interface JwtPayload {
+  id: number;
+  email: string;
+  roles: string[];
+}
+
+// Decodes the JWT payload without verifying its signature - sufficient for
+// client-side UI decisions (e.g. which nav links/routes to show).
+export function getCurrentUser(): JwtPayload | null {
+  const token = getToken();
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const payload = token.split('.')[1];
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(base64)) as JwtPayload;
+  } catch {
+    return null;
+  }
+}
+
+export function hasRole(role: string): boolean {
+  return getCurrentUser()?.roles.includes(role) ?? false;
+}
+
 export async function login(email: string, password: string): Promise<string> {
   const response = await fetch(`${API_URL}/api/login`, {
     method: 'POST',

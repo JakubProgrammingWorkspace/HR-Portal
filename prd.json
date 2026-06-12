@@ -174,7 +174,7 @@
         "Verify in browser using the playwright-cli skill: as admin, create a new user, assign a role, then remove the user"
       ],
       "priority": 11,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

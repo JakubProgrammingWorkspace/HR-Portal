@@ -196,6 +196,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /**
+     * The Role codes explicitly assigned to this user (excludes the implicit
+     * ROLE_USER added by getRoles()), exposed via the API for editing.
+     *
+     * @return list<string>
+     */
+    public function getRoleCodes(): array
+    {
+        return array_values(array_map(static fn (Role $role) => $role->getCode(), $this->roles->toArray()));
+    }
+
+    /**
      * @see PasswordAuthenticatedUserInterface
      */
     public function eraseCredentials(): void

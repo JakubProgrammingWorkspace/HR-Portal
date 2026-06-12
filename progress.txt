@@ -66,6 +66,18 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
   returns a single 422 `ConstraintViolation` response with a `violations`
   array (each entry has `propertyPath` + `message`) - no manual
   ValidationException handling needed in the processor/service.
+- When exposing a `Collection<Entity>` association as `list<string>` via a
+  getter (e.g. `array_map(fn(Role $r) => $r->getCode(), $collection->toArray())`),
+  always wrap the result in `array_values()`. After `removeElement()` +
+  `add()` on a Doctrine `ArrayCollection`, `toArray()` can return
+  non-sequential integer keys; `array_map` preserves those keys, and
+  `json_encode` then serializes the result as a JSON *object*
+  (`{"1":"X","2":"Y"}`) instead of an array, breaking frontend code expecting
+  `string[]`.
+- frontend/CLAUDE.md documents `getCurrentUser()`/`hasRole()` (JWT payload
+  decoding) and `<RequireAdmin>` for admin-only routes, plus the
+  `application/merge-patch+json` Content-Type requirement for PATCH via
+  apiFetch - read it before building more admin panels or PATCH calls.
 
 ## 2026-06-12 - US-001
 - Implemented the Docker Compose stack: postgres (16-alpine, with healthcheck),
@@ -543,4 +555,62 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
     US-009, and add a RoleService::deleteRole guard rejecting deletion of the
     seeded ROLE_ADMIN code (per this story's acceptance criteria, in case
     delete is added later).
+---
+
+## 2026-06-12 - US-011
+- Added `User::getRoleCodes(): list<string>` (no `#[Ignore]`) so GET/PATCH
+  /api/users now include a `roleCodes` field (the user's explicitly assigned
+  Role codes, e.g. `["ROLE_ADMIN"]` - does NOT include the implicit
+  ROLE_USER added by getRoles()). Wrapped in `array_values()` - see new
+  Codebase Patterns bullet about non-sequential ArrayCollection keys
+  serializing as a JSON object instead of an array (this bug initially broke
+  the frontend's role-editing save flow).
+- frontend/src/api/client.ts: added `JwtPayload`, `getCurrentUser()` (decodes
+  the JWT payload from localStorage without verifying the signature) and
+  `hasRole(role)`.
+- frontend/src/components/RequireAdmin.tsx (new): redirects to /dashboard if
+  `hasRole('ROLE_ADMIN')` is false; wrapped around the `/users` route in
+  App.tsx (nested inside the existing `<RequireAuth>`/`<Layout>` routes).
+- frontend/src/pages/UsersPage.tsx: full rewrite - fetches GET /api/users and
+  GET /api/roles, renders a table (E-mail, Imię i nazwisko, Role, Status,
+  Akcje). Role column is a `<select multiple>` per row (pre-populated from
+  `roleCodes`, options from /api/roles) with a "Zapisz" button (enabled only
+  when the selection differs from the saved roles) that PATCHes
+  `{ roles: [...] }`. "Dezaktywuj"/"Aktywuj" PATCHes `{ isActive: ... }`;
+  "Usuń" calls DELETE. Both have a `window.confirm()` Polish confirmation
+  dialog and are disabled for the logged-in admin's own row (via
+  `getCurrentUser()?.id`). A "Dodaj użytkownika" button opens a modal
+  (email, password, imię, nazwisko, roles multi-select) that POSTs
+  /api/users. API errors (422 violations / 409 conflicts) are surfaced via
+  the response body's `detail` field in a Polish-friendly banner/inline
+  message.
+- Files changed: backend/src/Entity/User.php,
+  frontend/src/{api/client.ts, App.tsx, pages/UsersPage.tsx,
+  components/RequireAdmin.tsx (new)}, frontend/CLAUDE.md, prd.json,
+  progress.txt.
+- Verified: `bin/console lint:container` OK, `php -l` clean,
+  `docker compose exec -e APP_ENV=test php bin/phpunit` -> 17 tests, 43
+  assertions, OK (unchanged - no new backend tests needed for this frontend
+  story; existing UserCrudTest/RoleCrudTest cover the underlying API).
+  `docker compose exec node npm run typecheck` passes. Verified in browser via
+  playwright-cli as admin@hr-portal.local: /users lists the admin with roles
+  "Administrator (ROLE_ADMIN)" and status "Aktywny"; created a new user
+  "jan.kowalski@hr-portal.local" with ROLE_USER via the modal (appeared in
+  the list); edited their roles to ROLE_USER+ROLE_HR_SPECIALIST and saved
+  (persisted after page reload); deactivated them (status -> "Nieaktywny",
+  button -> "Aktywuj"); removed them (row disappeared). Also logged in as a
+  newly-created non-admin user and confirmed navigating to /users redirects
+  to /dashboard. Cleaned up the test users via the API afterwards.
+- **Learnings for future iterations:**
+  - See the new "non-sequential ArrayCollection keys" Codebase Patterns
+    bullet - this is a general gotcha for any `Collection<Entity>` ->
+    `list<string>` getter, not just User/Role.
+  - `playwright-cli select <ref> "A,B"` / a JSON-array string does NOT work
+    for `<select multiple>` - use
+    `playwright-cli run-code "async page => { await page.locator('aria-ref=eX').selectOption(['A','B']); }"`
+    instead.
+  - US-026 (nav/route guards) can reuse `hasRole('ROLE_ADMIN')` from
+    client.ts to conditionally render the "Użytkownicy" link in
+    Layout.tsx's navItems - RequireAdmin only guards the route, it doesn't
+    hide the link.
 ---

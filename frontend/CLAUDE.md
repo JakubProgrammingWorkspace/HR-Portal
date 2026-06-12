@@ -7,3 +7,13 @@
   JWT in localStorage (key `hr_portal_token`).
 - New protected routes go under the `<RequireAuth>` route in `src/App.tsx`
   (redirects to /login if no token is present).
+- `getCurrentUser()`/`hasRole(role)` in `src/api/client.ts` decode the JWT
+  payload (id/email/roles, set by the backend's JwtCreatedListener) without
+  verifying the signature - good enough for client-side UI/route decisions.
+  For admin-only routes, wrap them in `<RequireAdmin>`
+  (`src/components/RequireAdmin.tsx`), which redirects to /dashboard if
+  `hasRole('ROLE_ADMIN')` is false (same nesting pattern as `<RequireAuth>`).
+- PATCH requests to API Platform resources need an explicit
+  `headers: { 'Content-Type': 'application/merge-patch+json' }` - `apiFetch`
+  only defaults to `application/json`, and the API returns 415 for PATCH with
+  that content type.
