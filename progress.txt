@@ -120,6 +120,27 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
   `inversedBy: 'theCollectionProperty'` or
   `doctrine:schema:validate` fails ("inverse side ... does not contain the
   required inversedBy attribute") even though no DB column changes.
+- For an entity field backed by a fixed set of string values (e.g.
+  Referral::examinationType: wstepne|okresowe|kontrolne), define a PHP backed
+  enum under src/Enum/ (e.g. `enum ExaminationType: string { case Wstepne =
+  'wstepne'; ... }`) and map the property as
+  `#[ORM\Column(length: 20, enumType: ExaminationType::class)]` with a
+  `ExaminationType $examinationType` typed property/getter/setter - Doctrine
+  persists the backing string value automatically, no custom DBAL type
+  needed. For US-021's input DTO, the equivalent field should be typed as the
+  enum itself (or validated with `#[Assert\Choice]` against
+  `ExaminationType::cases()` if the DTO field stays a string) so API
+  Platform's automatic validation rejects any value outside the 3 enum cases
+  with a 422.
+- Referral has a `#[ORM\OneToMany(mappedBy: 'referral', targetEntity:
+  ReferralExposureFactor::class, cascade: ['persist', 'remove'])]
+  $exposureFactors` collection with an `addExposureFactor()` helper that also
+  calls `$factor->setReferral($this)` - for US-021's create flow, build each
+  ReferralExposureFactor (resolving its `factor` IRI the same way as
+  Employee.company) and call `$referral->addExposureFactor($refFactor)`
+  before a single `persist($referral)` + `flush()`; cascade persist will
+  insert the join rows in the same transaction without persisting each one
+  individually.
 
 ## 2026-06-12 - US-001
 - Implemented the Docker Compose stack: postgres (16-alpine, with healthcheck),
@@ -1028,4 +1049,56 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
     `CategoryRow`/`FactorRow` shapes defined in ExposureFactorsPage.tsx
     (`{id, code, name, sortOrder, factors: [{id, name, description}]}` /
     `{id, name, description}`) can be reused/duplicated for that form.
+---
+
+## 2026-06-13 - US-020
+- Added App\Enum\ExaminationType (PHP backed string enum: Wstepne='wstepne',
+  Okresowe='okresowe', Kontrolne='kontrolne').
+- Added App\Entity\Referral (id, employee ManyToOne->Employee required,
+  examinationType (mapped via `enumType: ExaminationType::class`),
+  jobPosition, jobDescription (text), issuePlace, issueDate (date_immutable),
+  createdBy ManyToOne->User required, pdfPath (nullable string),
+  pdfGeneratedAt (nullable datetime), createdAt) with an `exposureFactors`
+  OneToMany collection (cascade: persist/remove) + `addExposureFactor()`
+  helper. Neither Referral nor ReferralExposureFactor has #[ApiResource] yet -
+  this story is entities + migration only, per the established
+  entities-then-API split (US-016/US-018).
+- Added App\Entity\ReferralExposureFactor (id, referral ManyToOne->Referral
+  required (inversedBy: 'exposureFactors'), factor ManyToOne->ExposureFactor
+  required, exposureDetails (text)).
+- Added ReferralRepository and ReferralExposureFactorRepository
+  (ServiceEntityRepository, no custom methods yet).
+- ExposureFactorService::deleteFactor now injects
+  ReferralExposureFactorRepository and throws ConflictHttpException (409,
+  "Nie można usunąć czynnika narażenia, ponieważ jest używany w
+  skierowaniach.") if `count(['factor' => $factor]) > 0`, before
+  remove()+flush() - same repository->count() 409-guard pattern as
+  CompanyService::deleteCompany.
+- Generated migrations/Version20260612224206.php (creates `referral` table +
+  FKs to `employee` and `"user"`, and `referral_exposure_factor` table + FKs
+  to `referral` and `exposure_factor`) and ran it against both dev and test
+  databases.
+- Added ExposureFactorCrudTest::testRemovingFactorUsedByReferralReturns409:
+  persists a Company/Employee/Referral/ReferralExposureFactor directly via the
+  EntityManager (no API yet for Referral), then asserts
+  DELETE /api/exposure-factors/{id} -> 409 with the Polish detail message and
+  the factor still exists afterwards.
+- Files changed: backend/src/Enum/ExaminationType.php (new),
+  backend/src/Entity/{Referral,ReferralExposureFactor}.php (new),
+  backend/src/Repository/{Referral,ReferralExposureFactor}Repository.php
+  (new), backend/src/Service/ExposureFactorService.php,
+  backend/migrations/Version20260612224206.php (new),
+  backend/tests/Api/ExposureFactorCrudTest.php, prd.json, progress.txt.
+- Verified: `bin/console lint:container` OK, `php -l` clean on all new/changed
+  files, `doctrine:schema:validate` in sync, `docker compose exec -e
+  APP_ENV=test php bin/phpunit` -> 30 tests, 86 assertions, OK (1 new test).
+- **Learnings for future iterations:**
+  - See the two new Codebase Patterns bullets above (PHP backed enum +
+    `enumType:` column mapping, and Referral's cascade-persist
+    `exposureFactors` collection) - both are directly reusable for US-021
+    (Referral API: create with examinationType validation and multiple
+    ReferralExposureFactor rows in one transaction).
+  - `php bin/console make:migration --no-interaction` still works (just prints
+    a non-interactive-mode warning to stderr) - no need to answer a
+    confirmation prompt.
 ---

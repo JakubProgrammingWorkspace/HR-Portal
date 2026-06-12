@@ -5,12 +5,16 @@ namespace App\Service;
 use App\Dto\ExposureFactorInput;
 use App\Entity\ExposureCategory;
 use App\Entity\ExposureFactor;
+use App\Repository\ReferralExposureFactorRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 class ExposureFactorService
 {
-    public function __construct(private readonly EntityManagerInterface $entityManager)
-    {
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        private readonly ReferralExposureFactorRepository $referralExposureFactorRepository,
+    ) {
     }
 
     public function createFactor(ExposureFactorInput $input, ExposureCategory $category): ExposureFactor
@@ -28,6 +32,10 @@ class ExposureFactorService
 
     public function deleteFactor(ExposureFactor $factor): void
     {
+        if ($this->referralExposureFactorRepository->count(['factor' => $factor]) > 0) {
+            throw new ConflictHttpException('Nie można usunąć czynnika narażenia, ponieważ jest używany w skierowaniach.');
+        }
+
         $this->entityManager->remove($factor);
         $this->entityManager->flush();
     }

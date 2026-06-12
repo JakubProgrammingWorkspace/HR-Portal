@@ -3,8 +3,14 @@
 namespace App\Tests\Api;
 
 use App\DataFixtures\AppFixtures;
+use App\Entity\Company;
+use App\Entity\Employee;
 use App\Entity\ExposureCategory;
 use App\Entity\ExposureFactor;
+use App\Entity\Referral;
+use App\Entity\ReferralExposureFactor;
+use App\Entity\User;
+use App\Enum\ExaminationType;
 use Doctrine\Common\DataFixtures\Executor\ORMExecutor;
 use Doctrine\Common\DataFixtures\Loader;
 use Doctrine\Common\DataFixtures\Purger\ORMPurger;
@@ -148,5 +154,70 @@ class ExposureFactorCrudTest extends WebTestCase
 
         $this->entityManager->clear();
         $this->assertNull($this->entityManager->getRepository(ExposureFactor::class)->find($factorId));
+    }
+
+    public function testRemovingFactorUsedByReferralReturns409(): void
+    {
+        $category = $this->entityManager->getRepository(ExposureCategory::class)->findOneBy(['code' => 'I']);
+
+        $factor = new ExposureFactor();
+        $factor->setName('Czynnik używany w skierowaniu');
+        $factor->setCategory($category);
+        $this->entityManager->persist($factor);
+
+        $company = new Company();
+        $company->setName('Test Company');
+        $company->setNip('1234563218');
+        $company->setStreet('ul. Testowa 1');
+        $company->setCity('Warszawa');
+        $company->setPostalCode('00-001');
+        $this->entityManager->persist($company);
+
+        $admin = $this->entityManager->getRepository(User::class)->findOneBy(['email' => 'admin@hr-portal.local']);
+
+        $employee = new Employee();
+        $employee->setFirstName('Jan');
+        $employee->setLastName('Testowy');
+        $employee->setPesel('90010112345');
+        $employee->setPhone('600100200');
+        $employee->setEmail('jan.testowy@example.com');
+        $employee->setAddress('ul. Polna 5, Warszawa');
+        $employee->setCompany($company);
+        $employee->setCreatedBy($admin);
+        $this->entityManager->persist($employee);
+
+        $referral = new Referral();
+        $referral->setEmployee($employee);
+        $referral->setExaminationType(ExaminationType::Wstepne);
+        $referral->setJobPosition('Operator maszyn');
+        $referral->setJobDescription('Praca przy maszynach');
+        $referral->setIssuePlace('Warszawa');
+        $referral->setIssueDate(new \DateTimeImmutable('2026-06-13'));
+        $referral->setCreatedBy($admin);
+        $this->entityManager->persist($referral);
+
+        $referralFactor = new ReferralExposureFactor();
+        $referralFactor->setReferral($referral);
+        $referralFactor->setFactor($factor);
+        $referralFactor->setExposureDetails('Poziom hałasu: 85 dB');
+        $this->entityManager->persist($referralFactor);
+
+        $this->entityManager->flush();
+        $factorId = $factor->getId();
+
+        $this->client->request(
+            'DELETE',
+            '/api/exposure-factors/'.$factorId,
+            server: ['HTTP_AUTHORIZATION' => 'Bearer '.$this->token],
+        );
+
+        $response = $this->client->getResponse();
+        $this->assertSame(Response::HTTP_CONFLICT, $response->getStatusCode());
+
+        $data = json_decode((string) $response->getContent(), true);
+        $this->assertSame('Nie można usunąć czynnika narażenia, ponieważ jest używany w skierowaniach.', $data['detail']);
+
+        $this->entityManager->clear();
+        $this->assertNotNull($this->entityManager->getRepository(ExposureFactor::class)->find($factorId));
     }
 }

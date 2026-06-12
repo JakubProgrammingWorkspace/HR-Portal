@@ -317,7 +317,7 @@
         "Backend code passes lint (`php bin/console lint:container` and `php -l` on changed files)"
       ],
       "priority": 20,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
