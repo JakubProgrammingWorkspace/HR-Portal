@@ -842,3 +842,36 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
     from the related collection's list response - avoids per-row lookups or
     N+1 requests.
 ---
+
+## 2026-06-13 - US-016
+- Added App\Entity\ExposureCategory (id, code (unique, length 10, e.g. "I"-"V"),
+  name, sortOrder) and App\Entity\ExposureFactor (id, name, category
+  (ManyToOne -> ExposureCategory, required), description (nullable text)),
+  plus their ServiceEntityRepository classes. Neither entity has
+  #[ApiResource] yet - this story is entities + migration only; US-018 will
+  add the API resources/operations on top.
+- Generated migrations/Version20260612222646.php (creates `exposure_category`
+  table with a unique index on `code`, and `exposure_factor` table with a FK
+  to `exposure_category`) and ran it against both the dev and test databases.
+- Files changed: backend/src/Entity/{ExposureCategory,ExposureFactor}.php
+  (new), backend/src/Repository/{ExposureCategoryRepository,
+  ExposureFactorRepository}.php (new),
+  backend/migrations/Version20260612222646.php (new), prd.json, progress.txt.
+- Verified: `bin/console lint:container` OK, `php -l` clean on all 4 new
+  files, `doctrine:schema:validate` reports mapping + DB schema in sync,
+  `docker compose exec -e APP_ENV=test php bin/phpunit` -> 24 tests, 64
+  assertions, OK (unchanged - no new tests for this entities-only story).
+- **Learnings for future iterations:**
+  - `bin/console make:migration` run inside the php container creates the new
+    migration file owned by root on the host bind mount - after generating,
+    run `docker compose exec -u root php chown -R 1000:1000
+    /var/www/html/migrations` (the broader
+    `chown -R 1000:1000 /var/www/html` from earlier composer-related notes
+    also works, but the narrower migrations-only chown is enough here).
+  - US-017 (fixtures for the 5 categories + seed factors) can follow the
+    AppFixtures pattern (US-005): persist ExposureCategory rows with codes
+    "I".."V" in sortOrder 1..5 and Polish names, then ExposureFactor rows each
+    referencing their category - all via the existing
+    AppFixtures::load()/ObjectManager, no new fixture class needed unless
+    preferred for organization.
+---
