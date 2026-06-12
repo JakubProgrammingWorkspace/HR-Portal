@@ -56,6 +56,16 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
   account"), throw `Symfony\Component\HttpKernel\Exception\ConflictHttpException`
   with a Polish message - API Platform returns it as a 409 with that message
   in `detail`.
+- For DTO field constraints that need a DB lookup (e.g. "code must be
+  unique" on a plain input DTO with no Doctrine UniqueEntity support), write
+  a custom `Symfony\Component\Validator\Constraint` +
+  `ConstraintValidator` pair under src/Validator/ (validator constructor can
+  inject a repository directly - validators are services). Apply it as an
+  attribute on the DTO property alongside `Assert\NotBlank`/`Assert\Regex`
+  etc. API Platform's automatic DTO validation runs all of these together and
+  returns a single 422 `ConstraintViolation` response with a `violations`
+  array (each entry has `propertyPath` + `message`) - no manual
+  ValidationException handling needed in the processor/service.
 
 ## 2026-06-12 - US-001
 - Implemented the Docker Compose stack: postgres (16-alpine, with healthcheck),
@@ -485,4 +495,52 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
   - US-010 (Role API) can reuse the same input-DTO + processor + service
     pattern; RoleService should live in src/Service/RoleService.php
     alongside UserService.
+---
+
+## 2026-06-12 - US-010
+- Added a Post operation to src/Entity/Role.php's #[ApiResource] (GetCollection
+  and Get were already there from US-007), using a new
+  src/Dto/RoleCreateInput.php (code, name, description) and
+  src/State/RoleCreateProcessor.php, delegating to a new
+  src/Service/RoleService.php::createRole (persist + flush only - no
+  cross-entity logic needed yet).
+- RoleCreateInput::$code has `#[Assert\NotBlank]`,
+  `#[Assert\Regex(pattern: '/^ROLE_[A-Z0-9_]+$/')]` (Polish message), and a new
+  custom `#[UniqueRoleCode]` constraint (src/Validator/UniqueRoleCode.php +
+  UniqueRoleCodeValidator.php) that queries RoleRepository for an existing row
+  with the same code. All three run together via API Platform's automatic DTO
+  validation, returning one 422 ConstraintViolation response with
+  `violations[0].propertyPath === "code"` for both the duplicate-ROLE_ADMIN
+  and invalid-format ("manager") cases.
+- No Delete operation exposed for Role (satisfies the "no delete operation
+  exposed" branch of the acceptance criteria - simplest option since nothing
+  in the PRD yet requires deleting roles).
+- POST /api/roles is already gated by the existing
+  `^/api/(users|roles)(/|$) -> MANAGE_USERS` access_control rule from US-007 -
+  no security.yaml changes needed.
+- Files changed: backend/src/Entity/Role.php,
+  backend/src/Dto/RoleCreateInput.php (new),
+  backend/src/State/RoleCreateProcessor.php (new),
+  backend/src/Service/RoleService.php (new),
+  backend/src/Validator/{UniqueRoleCode,UniqueRoleCodeValidator}.php (new),
+  backend/tests/Api/RoleCrudTest.php (new), prd.json, progress.txt.
+- Verified: `bin/console lint:container` OK, `php -l` clean on all new files,
+  `doctrine:schema:validate` still in sync (no entity/column changes),
+  `docker compose exec -e APP_ENV=test php bin/phpunit` -> 17 tests, 43
+  assertions, OK (3 new RoleCrudTest tests: create role, reject duplicate
+  ROLE_ADMIN code, reject invalid-format code). Manually curled the running
+  stack: GET /api/roles -> 200 with admin token, POST /api/roles with a valid
+  new code -> 201, POST with code "ROLE_ADMIN" (duplicate) -> 422 with
+  `violations[0].propertyPath === "code"`, POST with code "manager" (no
+  ROLE_ prefix) -> 422 with the regex message.
+- **Learnings for future iterations:**
+  - See the new "DTO uniqueness validation" bullet in Codebase Patterns above
+    - this custom-Constraint pattern will be reusable for US-012 (Company NIP
+    format/uniqueness if needed) and any other DTO-level field constraint
+    requiring a repository lookup.
+  - Role has no PATCH/DELETE operations - if a future story needs to edit or
+    remove roles, follow the UserUpdateInput/UserUpdateProcessor pattern from
+    US-009, and add a RoleService::deleteRole guard rejecting deletion of the
+    seeded ROLE_ADMIN code (per this story's acceptance criteria, in case
+    delete is added later).
 ---

@@ -157,7 +157,7 @@
         "Tests pass (PHPUnit covers creating a new role and rejecting a duplicate/invalid code)"
       ],
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

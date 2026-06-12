@@ -5,13 +5,20 @@ namespace App\Entity;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Post;
+use App\Dto\RoleCreateInput;
 use App\Repository\RoleRepository;
+use App\State\RoleCreateProcessor;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ApiResource(
     operations: [
         new GetCollection(),
         new Get(),
+        new Post(
+            input: RoleCreateInput::class,
+            processor: RoleCreateProcessor::class,
+        ),
     ],
 )]
 #[ORM\Entity(repositoryClass: RoleRepository::class)]
