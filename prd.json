@@ -48,7 +48,7 @@
         "Verify in browser using the playwright-cli skill: app loads at the dev server URL and navigation links switch routes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

@@ -12,6 +12,16 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
 - docker-compose.yml uses `${VAR:-default}` everywhere so the stack works
   out of the box even without a `.env` file; `.env.example` documents all
   overridable vars (DB creds, JWT key paths, CORS origin, ports, app URL).
+- frontend/ is a Vite + React 18 + TypeScript app. To add a new frontend
+  dependency: edit frontend/package.json, run `docker compose exec node npm
+  install`, then `docker run --rm -v "$(pwd)/frontend:/app" alpine chown -R
+  1000:1000 /app` to fix root ownership of node_modules/package-lock.json
+  before editing with host tools, then `docker compose restart node` to pick
+  up the new vite.config.ts/deps. Run `docker compose exec node npm run
+  typecheck` (= `tsc --noEmit`) before committing.
+- Tailwind CSS v4 is wired via the `@tailwindcss/vite` plugin (in
+  vite.config.ts) — no postcss.config/tailwind.config files needed;
+  frontend/src/index.css just contains `@import "tailwindcss";`.
 
 ## 2026-06-12 - US-001
 - Implemented the Docker Compose stack: postgres (16-alpine, with healthcheck),
@@ -94,4 +104,43 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
     backend/.env's defaults consistent anyway for clarity / non-docker usage.
   - API Platform v4 mounts resources under /api (config/routes/api_platform.yaml
     sets prefix: /api). /api/docs and /api both return 200 by default.
+---
+
+## 2026-06-12 - US-003
+- Scaffolded the React + TypeScript + Tailwind app in frontend/, replacing the
+  US-001 placeholder. Added react, react-dom, react-router-dom,
+  @vitejs/plugin-react, @tailwindcss/vite, tailwindcss, typescript and
+  @types/react(-dom) to package.json; rewrote vite.config.js -> vite.config.ts
+  (react() + tailwindcss() plugins), added tsconfig.json, and updated
+  index.html to load /src/main.tsx into <div id="root">.
+- src/main.tsx mounts <App/>, which sets up a BrowserRouter with routes:
+  /login (no layout), and /dashboard, /users, /companies, /employees,
+  /exposure-factors, /referrals nested under a shared <Layout/> (sidebar nav
+  with Polish labels + top bar with "Wyloguj"). "/" and unmatched paths
+  redirect to /dashboard.
+- Each route has a placeholder page component under src/pages/ with a
+  Tailwind-styled heading + description. src/index.css contains
+  `@import "tailwindcss";`.
+- Files changed: frontend/{package.json,package-lock.json,index.html,
+  vite.config.ts,tsconfig.json}, frontend/src/{main.tsx,App.tsx,index.css},
+  frontend/src/components/Layout.tsx, frontend/src/pages/*.tsx; removed
+  frontend/{vite.config.js,src/main.js}. Also prd.json, progress.txt.
+- Verified: `docker compose exec node npm run typecheck` passes (tsc --noEmit,
+  no errors); restarted the node container and confirmed Vite serves the new
+  app on :5173. Used playwright-cli to load /, confirm it redirects to
+  /dashboard with sidebar + top bar rendered and Tailwind styles applied
+  (screenshot showed styled card/buttons), clicked through all 6 nav links
+  (each rendered its placeholder page), and loaded /login (styled centered
+  card with E-mail/Hasło fields and "Zaloguj się" button, screenshot
+  confirmed Tailwind styling).
+- **Learnings for future iterations:**
+  - See the new "Tailwind CSS v4" and "frontend dependency" bullets in
+    Codebase Patterns above — the npm install / chown / restart sequence is
+    needed for every new frontend dependency, not just this one.
+  - React Router logs two "Future Flag Warning" console warnings (v7_*) on
+    every page load — these are expected/harmless with react-router-dom v6
+    and don't need fixing.
+  - Layout.tsx's navItems array is the single place to add/remove sidebar
+    links; US-026 (route guards/role-based nav) will likely filter this list
+    based on the logged-in user's roles.
 ---
