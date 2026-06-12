@@ -41,6 +41,21 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
   property to avoid "Unexpected non-object element in to-many relation"
   normalizer errors; expose the desired shape under a different field name
   if needed.
+- API Platform write pattern for entities needing custom field mapping
+  (e.g. plain-text password -> hash, role codes -> Role entities): give the
+  Post/Patch operation an `input: SomeInput::class` DTO (plain class with
+  public properties, optionally `#[Assert\*]` constraints - API Platform
+  validates the DTO automatically) and a `processor: SomeProcessor::class`
+  implementing `ApiPlatform\State\ProcessorInterface`. The processor calls
+  a dedicated `*Service` (thick service / thin processor) that does the
+  mapping + EntityManager persist/flush. For Patch, do NOT rely on
+  `$context['previous_data']` as the entity to mutate - it is NOT a
+  UnitOfWork-managed instance (flush() silently no-ops on it); instead
+  re-fetch the entity via its repository using `$uriVariables['id']` inside
+  the processor. For business-rule rejections (e.g. "can't delete your own
+  account"), throw `Symfony\Component\HttpKernel\Exception\ConflictHttpException`
+  with a Polish message - API Platform returns it as a 409 with that message
+  in `detail`.
 
 ## 2026-06-12 - US-001
 - Implemented the Docker Compose stack: postgres (16-alpine, with healthcheck),
@@ -417,4 +432,57 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
   - playwright-cli writes a `.playwright-cli/` directory with snapshots/logs
     into the repo root - now gitignored; remove it after use if it appears
     untracked.
+---
+
+## 2026-06-12 - US-009
+- Added Post/Patch/Delete operations to src/Entity/User.php's #[ApiResource]
+  (GetCollection/Get were already there from US-007). Post and Patch use
+  custom `input` DTOs (src/Dto/UserCreateInput.php, UserUpdateInput.php) and
+  custom processors (src/State/UserCreateProcessor.php,
+  UserUpdateProcessor.php, UserDeleteProcessor.php implementing
+  ApiPlatform\State\ProcessorInterface). All three delegate to the new
+  src/Service/UserService.php (thick service / thin processor, per the
+  project's architecture rule).
+- UserCreateInput: email (NotBlank+Email), password, firstName, lastName
+  (all NotBlank), roles (list<string> of Role codes, default []) - validated
+  automatically by API Platform before the processor runs.
+- UserUpdateInput: firstName, lastName, isActive, roles - all nullable;
+  PATCH only changes fields that are present (non-null) in the request body.
+- UserService::createUser hashes the password via UserPasswordHasherInterface
+  and assigns Role entities looked up by code (RoleRepository::findBy via
+  `code IN (...)`, unknown codes silently ignored).
+- UserService::updateUser/deleteUser use the injected
+  Symfony\Bundle\SecurityBundle\Security to compare the target user's id
+  against the currently authenticated user's id; deactivating
+  (isActive=false) or deleting your own account throws
+  ConflictHttpException (409) with a Polish message ("Nie można
+  deaktywować/usunąć własnego konta.") before any change is persisted.
+- Files changed: backend/src/Entity/User.php,
+  backend/src/Dto/{UserCreateInput,UserUpdateInput}.php (new),
+  backend/src/Service/UserService.php (new),
+  backend/src/State/{UserCreateProcessor,UserUpdateProcessor,
+  UserDeleteProcessor}.php (new), backend/tests/Api/UserCrudTest.php (new),
+  prd.json, progress.txt.
+- Verified: `bin/console lint:container` OK, `php -l` clean on all new/changed
+  files, `doctrine:schema:validate` still in sync (no entity/column changes -
+  only new operations/DTOs/services), `docker compose exec -e APP_ENV=test
+  php bin/phpunit` -> 14 tests, 34 assertions, OK (4 new tests in
+  UserCrudTest covering: create with roles + hashed password + login with the
+  new credentials, self-delete rejected with 409, self-deactivate rejected
+  with 409, and update-roles/deactivate/delete of another user). Also
+  confirmed GET /api/docs still returns 200 with the new operations
+  registered.
+- **Learnings for future iterations:**
+  - See the new "API Platform write pattern" bullet in Codebase Patterns
+    above - the `previous_data` gotcha (not UnitOfWork-managed, so mutating +
+    flushing it silently no-ops) cost the most debugging time this iteration;
+    always re-fetch via repository in Patch/Delete processors instead.
+  - PHPUnit functional tests that persist an entity via
+    `$this->entityManager` and then make an HTTP request that mutates the
+    same row must call `$this->entityManager->clear()` before re-`find()`ing
+    it afterwards, otherwise the stale identity-mapped object (from before
+    the request) is returned instead of the updated DB row.
+  - US-010 (Role API) can reuse the same input-DTO + processor + service
+    pattern; RoleService should live in src/Service/RoleService.php
+    alongside UserService.
 ---

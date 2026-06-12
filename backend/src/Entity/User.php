@@ -3,9 +3,17 @@
 namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Post;
+use App\Dto\UserCreateInput;
+use App\Dto\UserUpdateInput;
 use App\Repository\UserRepository;
+use App\State\UserCreateProcessor;
+use App\State\UserDeleteProcessor;
+use App\State\UserUpdateProcessor;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -17,6 +25,17 @@ use Symfony\Component\Serializer\Attribute\Ignore;
     operations: [
         new GetCollection(),
         new Get(),
+        new Post(
+            input: UserCreateInput::class,
+            processor: UserCreateProcessor::class,
+        ),
+        new Patch(
+            input: UserUpdateInput::class,
+            processor: UserUpdateProcessor::class,
+        ),
+        new Delete(
+            processor: UserDeleteProcessor::class,
+        ),
     ],
 )]
 #[ORM\Entity(repositoryClass: UserRepository::class)]
