@@ -1,0 +1,431 @@
+{
+  "project": "HR-Portal",
+  "branchName": "ralph/hr-portal",
+  "description": "HR-Portal - a Polish HR management application (Users & flexible Roles, Companies, Employees, an occupational exposure factors catalogue, and standardized medical examination referrals with PDF generation), built with a Symfony 6 + API Platform backend (PHP 8.5, thick services / thin controllers) and a React + Tailwind CSS frontend, all running via Docker Compose.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Docker Compose environment",
+      "description": "As a developer, I need a Docker Compose stack so the whole app (frontend, backend, database, dev tooling) runs locally with one command.",
+      "acceptanceCriteria": [
+        "docker-compose.yml defines services: php (PHP 8.5-FPM running Symfony 6), nginx, postgres (PostgreSQL 16), and node (Vite dev server)",
+        "`docker compose up` starts all services without errors",
+        "Nginx serves the Symfony app on a documented port (e.g. http://localhost:8000)",
+        ".env.example documents DB credentials, JWT key paths, CORS origin, and app URL",
+        "README documents how to start the stack, run migrations, and load fixtures",
+        "`docker compose config` validates the compose file without errors"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Symfony 6 + API Platform skeleton",
+      "description": "As a developer, I need a Symfony 6 project with API Platform installed and configured so backend resources can be exposed as a REST API.",
+      "acceptanceCriteria": [
+        "Symfony 6.4 project scaffolded under backend/, running on PHP 8.5 inside the php container",
+        "api-platform/core installed and configured (JSON as default format); /api/docs returns API documentation",
+        "nelmio/cors-bundle configured to allow requests from the frontend dev origin",
+        "Doctrine ORM configured against the postgres service; `bin/console doctrine:database:create` succeeds",
+        "GET /api/health returns 200 OK",
+        "`composer install` completes without errors inside the php container"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "React + Tailwind skeleton",
+      "description": "As a developer, I need a React app with Tailwind and routing set up so feature panels can be built consistently.",
+      "acceptanceCriteria": [
+        "React app scaffolded under frontend/ using Vite + TypeScript",
+        "Tailwind CSS configured; a sample page renders Tailwind-styled content",
+        "React Router configured with placeholder routes: /login, /dashboard, /users, /companies, /employees, /exposure-factors, /referrals",
+        "Shared layout component (sidebar nav + top bar) renders around the authenticated routes",
+        "Typecheck passes (`tsc --noEmit`)",
+        "Verify in browser using the playwright-cli skill: app loads at the dev server URL and navigation links switch routes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "User and Role entities + migration",
+      "description": "As a developer, I need User and Role entities with a many-to-many relationship so roles can be assigned flexibly and new roles added later without code changes.",
+      "acceptanceCriteria": [
+        "Role entity: id, code (unique string, e.g. ROLE_ADMIN), name (Polish display name), description (nullable text)",
+        "User entity implements UserInterface/PasswordAuthenticatedUserInterface: id, email (unique), password, firstName, lastName, isActive (default true), createdAt",
+        "Many-to-many join table user_role between User and Role",
+        "User::getRoles() returns the code of each assigned Role plus ROLE_USER as a base role for every user",
+        "Doctrine migration generated and runs successfully (`bin/console doctrine:migrations:migrate`)",
+        "Backend code passes lint (`php bin/console lint:container` and `php -l` on changed files)"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Seed data for Roles and default Admin user",
+      "description": "As a developer, I need fixtures so the app has a working Admin account and base roles after first setup.",
+      "acceptanceCriteria": [
+        "doctrine/doctrine-fixtures-bundle installed",
+        "Fixture creates Role records: ROLE_ADMIN (\"Administrator\") and ROLE_USER (\"Użytkownik\")",
+        "Fixture creates one Admin user (email/password documented in README, e.g. admin@hr-portal.local) assigned ROLE_ADMIN, with a properly hashed password",
+        "`bin/console doctrine:fixtures:load` runs without error",
+        "Tests pass (PHPUnit test confirms the admin user exists with ROLE_ADMIN after loading fixtures)"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "JWT authentication",
+      "description": "As a user, I want to log in with email/password and receive a JWT so I can make authenticated API requests.",
+      "acceptanceCriteria": [
+        "lexik/jwt-authentication-bundle installed and configured with a generated key pair",
+        "POST /api/login accepts { email, password } and returns a JWT (payload includes user id, email, roles) on success, 401 on invalid credentials",
+        "Custom UserChecker rejects login for users with isActive = false, returning a clear error",
+        "All other /api/* routes (except /api/login and /api/docs) require a valid JWT (401 if missing/invalid)",
+        "Token TTL is configurable via .env (default 1 hour)",
+        "Tests pass (PHPUnit functional tests cover valid login, invalid credentials, and inactive user)"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Authorization voter for admin-only resources",
+      "description": "As a developer, I need a Security Voter restricting User and Role management to admins so future roles can be granted/denied access without rewriting controllers.",
+      "acceptanceCriteria": [
+        "A UserManagementVoter (or equivalent) grants access to /api/users and /api/roles operations only to subjects with ROLE_ADMIN",
+        "Voter is registered as a service and applied via #[IsGranted] attributes or security access_control rules, not inline controller checks",
+        "All other resources remain accessible to any authenticated user (IS_AUTHENTICATED_FULLY)",
+        "Tests pass (PHPUnit test: a non-admin user gets 403 from /api/users and /api/roles; an admin user gets 200)"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Login page (frontend)",
+      "description": "As a user, I want a login form so I can access the portal.",
+      "acceptanceCriteria": [
+        "/login page with email + password fields and a submit button",
+        "On success, the JWT is stored and the user is redirected to /dashboard",
+        "On failure, an inline Polish error message is shown (\"Nieprawidłowy e-mail lub hasło\")",
+        "A centralized API client attaches `Authorization: Bearer <token>` to all requests and redirects to /login on 401",
+        "Unauthenticated users visiting any protected route are redirected to /login",
+        "A \"Wyloguj\" action clears the token and redirects to /login",
+        "Typecheck passes",
+        "Verify in browser using the playwright-cli skill: log in with the seeded admin credentials and reach the dashboard"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "User CRUD API (admin only)",
+      "description": "As an Admin, I want API endpoints to list, create, update, and remove Users, with their Roles, so I can manage portal access.",
+      "acceptanceCriteria": [
+        "API Platform resource for User exposes GET /api/users (list), GET /api/users/{id}, POST /api/users, PATCH /api/users/{id}, DELETE /api/users/{id}, restricted to ROLE_ADMIN via the US-007 voter",
+        "POST /api/users accepts email, password, firstName, lastName, roles (array of Role codes); password is hashed via a custom API Platform state processor that delegates to a UserService (not the controller)",
+        "PATCH /api/users/{id} allows updating firstName, lastName, isActive, and roles",
+        "An Admin cannot delete or deactivate their own account; UserService rejects this with a 409/422 and a Polish error message",
+        "Output serialization excludes the password field",
+        "Tests pass (PHPUnit covers user creation with roles, password hashing, and self-deletion rejection)"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Role API (admin only)",
+      "description": "As an Admin, I want API endpoints to list and create Roles so new roles can be introduced without code changes.",
+      "acceptanceCriteria": [
+        "API Platform resource for Role exposes GET /api/roles (list) and POST /api/roles (code, name, description), restricted to ROLE_ADMIN via the US-007 voter",
+        "POST /api/roles validates that `code` is unique and matches a ROLE_* pattern, returning 422 with field errors on violation",
+        "No delete operation is exposed for Role, or if exposed, RoleService rejects deletion of the seeded ROLE_ADMIN role",
+        "Tests pass (PHPUnit covers creating a new role and rejecting a duplicate/invalid code)"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "User management panel (frontend)",
+      "description": "As an Admin, I want a panel to view all users, add new ones, remove them, and manage their roles.",
+      "acceptanceCriteria": [
+        "/users page (nav item visible only for ROLE_ADMIN users) lists users with email, name, roles, and active status",
+        "\"Add user\" form/modal creates a user with email, password, first/last name, and a multi-select of roles populated from /api/roles",
+        "Each row has a \"Remove\"/\"Deactivate\" action with a confirmation dialog before submitting",
+        "Each row allows editing assigned roles via the multi-select, saved via PATCH /api/users/{id}",
+        "Non-admin users navigating to /users directly are redirected to /dashboard",
+        "Typecheck passes",
+        "Verify in browser using the playwright-cli skill: as admin, create a new user, assign a role, then remove the user"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Company entity + API",
+      "description": "As a developer, I need a Company entity and API so employees can later be linked to a company.",
+      "acceptanceCriteria": [
+        "Company entity: id, name, nip (string, validated as a 10-digit Polish NIP), street, city, postalCode, createdAt",
+        "API Platform resource exposes GET /api/companies, GET /api/companies/{id}, POST /api/companies, PATCH /api/companies/{id}, DELETE /api/companies/{id} for any authenticated user",
+        "Validation constraints enforce required fields and NIP format, returning 422 with field-level errors on failure",
+        "Business logic (validation orchestration) lives in a CompanyService, not the controller",
+        "Tests pass (PHPUnit covers create, NIP validation failure, and delete)"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Company management panel (frontend)",
+      "description": "As a user, I want a panel to add, view, and remove Companies.",
+      "acceptanceCriteria": [
+        "/companies page lists companies with name, NIP, and address",
+        "\"Add company\" form creates a company with name, NIP, street, city, postal code; client-side validation mirrors backend constraints",
+        "\"Remove\" action shows a confirmation dialog before calling DELETE /api/companies/{id}",
+        "Form and list show validation/error messages in Polish",
+        "Typecheck passes",
+        "Verify in browser using the playwright-cli skill: add a company, see it in the list, then remove it"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Employee entity + API",
+      "description": "As a developer, I need an Employee entity and API so employee records can be managed and linked to a Company.",
+      "acceptanceCriteria": [
+        "Employee entity: id, firstName, lastName, pesel (string, validated as 11-digit Polish PESEL), phone, email, address (free text), company (ManyToOne to Company, required), createdBy (ManyToOne to User), createdAt",
+        "API Platform resource exposes GET /api/employees (paginated), GET /api/employees/{id}, POST /api/employees, PATCH /api/employees/{id}, DELETE /api/employees/{id} for any authenticated user",
+        "POST/PATCH validate PESEL (11 digits) and email format, returning 422 with field errors on failure",
+        "createdBy is set automatically from the authenticated user via a state processor, not accepted from client input",
+        "POST /api/employees requires a valid `company` IRI; returns 422 if missing or referencing a non-existent company",
+        "API Platform SearchFilter enabled on firstName, lastName, and company",
+        "CompanyService::delete is updated to return 409 with a Polish error message when the company has linked Employees",
+        "Tests pass (PHPUnit covers employee creation with company link, PESEL validation, and the company-delete-with-employees 409 case)"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "Employee management panel (frontend)",
+      "description": "As a user, I want a panel to add, view, and remove Employees, assigning each to a Company.",
+      "acceptanceCriteria": [
+        "/employees page lists employees with name, phone, email, address, and company name; supports search by name and filter by company",
+        "\"Add employee\" form includes Imię, Nazwisko, PESEL, Telefon, E-mail, Adres, and a Company dropdown populated from /api/companies",
+        "Client-side validation for PESEL (11 digits) and email format, mirroring backend errors, shown in Polish",
+        "\"Remove\" action shows a confirmation dialog before calling DELETE /api/employees/{id}",
+        "Typecheck passes",
+        "Verify in browser using the playwright-cli skill: add an employee linked to an existing company, see it in the list, then remove it"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "ExposureCategory and ExposureFactor entities + migration",
+      "description": "As a developer, I need entities for the 5 fixed exposure-factor categories and their factors so the catalogue can be stored and managed.",
+      "acceptanceCriteria": [
+        "ExposureCategory entity: id, code (e.g. I-V), name (Polish display name), sortOrder",
+        "ExposureFactor entity: id, name, category (ManyToOne to ExposureCategory), description (nullable)",
+        "Doctrine migration generated and runs successfully",
+        "Backend code passes lint (`php bin/console lint:container` and `php -l` on changed files)"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "Exposure factor fixtures (5 categories + seed factors)",
+      "description": "As a developer, I need fixtures seeding the 5 fixed categories from the official Polish medical referral form, each with real example factors, so users have a working catalogue out of the box.",
+      "acceptanceCriteria": [
+        "Fixtures seed exactly 5 ExposureCategory records matching Annex 3 of Rozporządzenie Ministra Zdrowia i Opieki Społecznej z dnia 30 maja 1996 r.: I. Czynniki fizyczne, II. Pyły, III. Czynniki chemiczne, IV. Czynniki biologiczne, V. Inne czynniki, w tym niebezpieczne",
+        "I. Czynniki fizyczne seeded with at least: Hałas; Hałas ultradźwiękowy; Wibracja (drgania mechaniczne) ogólne; Wibracja (drgania mechaniczne) miejscowe; Mikroklimat gorący; Mikroklimat zimny; Promieniowanie optyczne (UV/IR/widzialne); Promieniowanie laserowe; Promieniowanie jonizujące; Pole elektromagnetyczne; Praca przy monitorach ekranowych powyżej 4 godzin dziennie",
+        "II. Pyły seeded with at least: Pyły zawierające azbest; Pyły zawierające wolną krzemionkę; Pyły drewna; Pyły rud metali; Pyły węgla; Pyły mączne; Pyły bawełny; Pyły zwierzęce i roślinne niesklasyfikowane",
+        "III. Czynniki chemiczne seeded with at least: Substancje o działaniu toksycznym; Substancje o działaniu drażniącym; Substancje o działaniu uczulającym (alergizującym); Substancje o działaniu rakotwórczym lub mutagennym; Substancje o działaniu szkodliwym na rozrodczość; Rozpuszczalniki organiczne; Metale i ich związki (ołów, rtęć, kadm, chrom, nikiel); Pestycydy; Tlenek węgla; Tlenki azotu",
+        "IV. Czynniki biologiczne seeded with at least: Wirusy; Bakterie; Grzyby (pleśnie); Pasożyty; Materiał biologiczny pochodzenia ludzkiego (krew, płyny ustrojowe); Mikroorganizmy w środowisku pracy rolniczej/leśnej; Kontakt ze zwierzętami",
+        "V. Inne czynniki, w tym niebezpieczne seeded with at least: Praca na wysokości; Obsługa maszyn i urządzeń w ruchu; Wymuszona pozycja ciała; Obciążenie statyczne układu mięśniowo-szkieletowego; Obciążenie dynamiczne (praca fizyczna ciężka); Praca w porze nocnej; Praca zmianowa; Obciążenie psychiczne związane z odpowiedzialnością/kontaktem z ludźmi; Praca przy urządzeniach pod napięciem; Praca w warunkach ograniczonej widoczności; Ryzyko poślizgnięcia, potknięcia, upadku",
+        "`bin/console doctrine:fixtures:load` runs without error and produces exactly 5 categories with the factors above",
+        "Tests pass (PHPUnit test asserts 5 categories exist with the expected codes after loading fixtures)"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-018",
+      "title": "Exposure factor API",
+      "description": "As a developer, I need an API to list categories with their factors (read-only) and to add/remove factors within them.",
+      "acceptanceCriteria": [
+        "GET /api/exposure-categories returns all 5 categories with their factors (nested or via subresource), for any authenticated user, in sortOrder",
+        "ExposureCategory is read-only via the API (no POST/PATCH/DELETE operations exposed)",
+        "GET /api/exposure-factors, POST /api/exposure-factors, DELETE /api/exposure-factors/{id} available to any authenticated user; POST requires name and a valid category IRI",
+        "DELETE /api/exposure-factors/{id} returns 409 with a Polish error message if the factor is referenced by any ReferralExposureFactor (logic in ExposureFactorService) — implementable now with a guard that currently always allows deletion until US-020 introduces the referencing entity, then re-checked in US-021",
+        "Tests pass (PHPUnit covers listing categories with factors, adding a factor, and removing a factor)"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-019",
+      "title": "Czynniki narażeń panel (frontend)",
+      "description": "As a user, I want a panel showing the 5 fixed categories with their factors, where I can add new factors and remove existing ones.",
+      "acceptanceCriteria": [
+        "/exposure-factors page renders the 5 categories (in I-V order) as sections/cards, each listing its factors",
+        "Each category section has an \"Add factor\" inline form (name + optional description) posting to /api/exposure-factors with the correct category",
+        "Each factor row has a \"Remove\" action with confirmation; shows a Polish error message if the API returns 409 (factor in use)",
+        "Category names/headers are not editable or removable in the UI",
+        "Typecheck passes",
+        "Verify in browser using the playwright-cli skill: all 5 categories render with seeded factors, add a new factor to a category, then remove it"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-020",
+      "title": "Referral and ReferralExposureFactor entities + migration",
+      "description": "As a developer, I need a Referral entity capturing all fields from the official Polish referral form, linked to selected exposure factors with per-factor exposure details.",
+      "acceptanceCriteria": [
+        "Referral entity: id, employee (ManyToOne, required), examinationType (PHP enum: wstepne | okresowe | kontrolne), jobPosition, jobDescription (text), issuePlace, issueDate, createdBy (ManyToOne to User), pdfPath (nullable string), pdfGeneratedAt (nullable datetime), createdAt",
+        "ReferralExposureFactor join entity: id, referral (ManyToOne), factor (ManyToOne to ExposureFactor), exposureDetails (text)",
+        "Doctrine migration generated and runs successfully",
+        "ExposureFactorService::delete (US-018) now checks ReferralExposureFactor references and returns 409 if the factor is in use",
+        "Backend code passes lint (`php bin/console lint:container` and `php -l` on changed files)"
+      ],
+      "priority": 20,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-021",
+      "title": "Referral API (create, list, delete)",
+      "description": "As a user, I want API endpoints to create a Referral for an Employee with selected exposure factors, and to list/delete referrals.",
+      "acceptanceCriteria": [
+        "API Platform resource for Referral exposes GET /api/referrals (paginated, ordered by issueDate desc), GET /api/referrals/{id}, POST /api/referrals, DELETE /api/referrals/{id} for any authenticated user",
+        "POST /api/referrals accepts employee IRI, examinationType, jobPosition, jobDescription, issuePlace, issueDate, and an array of { factor: IRI, exposureDetails: string }; creates the Referral and its ReferralExposureFactor rows in one transaction via a ReferralService (not the controller)",
+        "createdBy is set automatically from the authenticated user via a state processor",
+        "Validation: examinationType must be one of the 3 enum values; employee must reference an existing Employee; returns 422 with field errors otherwise",
+        "Tests pass (PHPUnit covers creating a referral with multiple factors across categories, validation failure for invalid examinationType, and deletion)"
+      ],
+      "priority": 21,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-022",
+      "title": "Referral creation form (frontend)",
+      "description": "As a user, I want a form at the top of the Referrals panel to create a new referral for an employee, matching the official Polish form fields.",
+      "acceptanceCriteria": [
+        "Form fields: Pracownik (employee select/search from /api/employees), Typ badania (wstępne / okresowe / kontrolne), Stanowisko pracy, Opis warunków pracy / zakres czynności (textarea), Miejsce wystawienia, Data wystawienia (date picker defaulting to today)",
+        "Form renders the 5 exposure categories (from /api/exposure-categories) each with checkboxes for its factors; checking a factor reveals a text input for \"Wielkość narażenia / wyniki pomiarów\"",
+        "Submitting calls POST /api/referrals with the selected employee, form fields, and the list of checked factors with their exposure details",
+        "On success, the new referral appears at the top of the list (placeholder list is acceptable if US-025 is not yet built) and the form resets",
+        "Required-field validation prevents submission with missing employee, examination type, or job position; errors shown in Polish",
+        "Typecheck passes",
+        "Verify in browser using the playwright-cli skill: fill the form for a seeded employee, select factors from at least 2 categories, submit, and confirm a success response"
+      ],
+      "priority": 22,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-023",
+      "title": "PDF generation service",
+      "description": "As a developer, I need a service that renders a Referral as a PDF matching the official \"Skierowanie na badania lekarskie\" layout and stores it on the server filesystem.",
+      "acceptanceCriteria": [
+        "dompdf/dompdf installed; a Twig template (referral_pdf.html.twig) reproduces the official form layout: employer designation + place/date header, \"SKIEROWANIE NA BADANIA LEKARSKIE (wstępne/okresowe/kontrolne)\" title with the selected type indicated, employee name + PESEL + address, job position and description, sections \"I. Czynniki fizyczne\" through \"V. Inne czynniki, w tym niebezpieczne\" each listing the selected factors with their exposure details, total count of factors, and a signature line",
+        "ReferralPdfGeneratorService::generate(Referral $referral): string renders the template and writes the PDF to a configurable storage path (e.g. var/referrals/{id}.pdf), returning the relative path",
+        "Regenerating overwrites the existing file",
+        "Tests pass (PHPUnit test generates a PDF for a sample referral with factors from multiple categories and asserts the file exists and is non-empty)"
+      ],
+      "priority": 23,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-024",
+      "title": "Referral PDF generate and download endpoints",
+      "description": "As a user, I want API endpoints to trigger PDF generation for a referral and to download the resulting file.",
+      "acceptanceCriteria": [
+        "POST /api/referrals/{id}/generate-pdf (custom API Platform operation or controller delegating entirely to ReferralPdfGeneratorService) generates the PDF, sets pdfPath and pdfGeneratedAt on the Referral, and returns the updated resource",
+        "Regenerating updates pdfGeneratedAt and overwrites the stored file",
+        "GET /api/referrals/{id}/pdf streams the stored PDF file for an authenticated user, returning 404 if no PDF has been generated yet",
+        "Tests pass (PHPUnit covers generate-pdf updating pdfPath/pdfGeneratedAt, and downloading the generated file)"
+      ],
+      "priority": 24,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-025",
+      "title": "Referral list with PDF download (frontend)",
+      "description": "As a user, I want to see all referrals in a list and generate/download a PDF for any of them.",
+      "acceptanceCriteria": [
+        "/referrals page shows the creation form (US-022) at the top and a table below listing: Pracownik, Typ badania, Stanowisko, Data wystawienia, Status PDF (Wygenerowano / Nie wygenerowano)",
+        "Each row has a \"Generuj PDF\" button calling POST /api/referrals/{id}/generate-pdf; on success the button changes to/reveals a \"Pobierz PDF\" link",
+        "\"Pobierz PDF\" downloads the file via GET /api/referrals/{id}/pdf with the auth token attached",
+        "List is paginated matching the API Platform default page size",
+        "Typecheck passes",
+        "Verify in browser using the playwright-cli skill: from a referral created via the form, click \"Generuj PDF\", then download the resulting PDF and confirm a file is retrieved"
+      ],
+      "priority": 25,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-026",
+      "title": "App shell, navigation, and route guards",
+      "description": "As a user, I want a consistent layout with navigation to all panels, showing only the sections my role allows.",
+      "acceptanceCriteria": [
+        "Sidebar links: Dashboard, Użytkownicy (admin only), Firmy, Pracownicy, Czynniki narażeń, Skierowania",
+        "\"Użytkownicy\" link only renders for users whose roles include ROLE_ADMIN",
+        "Top bar shows the logged-in user's name/email and a \"Wyloguj\" button",
+        "All panel routes are wrapped in an authentication guard redirecting to /login if no valid token is present",
+        "Typecheck passes",
+        "Verify in browser using the playwright-cli skill: log in as a non-admin user (create one via the admin panel) and confirm \"Użytkownicy\" is not visible/accessible"
+      ],
+      "priority": 26,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-027",
+      "title": "Dashboard landing page",
+      "description": "As a user, I want a simple dashboard after login summarizing key counts.",
+      "acceptanceCriteria": [
+        "/dashboard shows counts: total Companies, total Employees, total Referrals",
+        "Counts are fetched from existing list endpoints using API Platform's totalItems from collection responses — no new backend endpoint required",
+        "Page renders within 1 second on local dev data volumes (seed data only)",
+        "Typecheck passes",
+        "Verify in browser using the playwright-cli skill: dashboard loads after login and shows non-zero counts after seed data is loaded"
+      ],
+      "priority": 27,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
