@@ -302,7 +302,7 @@
         "Verify in browser using the playwright-cli skill: all 5 categories render with seeded factors, add a new factor to a category, then remove it"
       ],
       "priority": 19,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

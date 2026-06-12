@@ -988,3 +988,44 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
     Map<string,string> pattern from US-015 applies if US-019 needs to show a
     factor's category name from a flat /api/exposure-factors list.
 ---
+
+## 2026-06-13 - US-019
+- Replaced the frontend/src/pages/ExposureFactorsPage.tsx placeholder with a
+  full panel: fetches GET /api/exposure-categories on load (already returns
+  the 5 categories in sortOrder, each with a nested `factors: [{id, name,
+  description}]` array per US-018) and renders one `CategoryCard` section per
+  category, headed by `{code}. {name}` (e.g. "I. Czynniki fizyczne").
+- Each CategoryCard lists its factors (name + optional description) with a
+  per-row "Usuń" button (window.confirm Polish message
+  `Czy na pewno usunąć czynnik "{name}"?`); on confirm, DELETE
+  /api/exposure-factors/{id} and remove the row from local state on 204. A
+  409 response (factor in use - not reachable yet until US-020/US-021 wire up
+  ReferralExposureFactor) shows the API's Polish `detail` message in a banner
+  at the top of the card via the same `extractErrorMessage` helper used by
+  CompaniesPage.
+- Each CategoryCard has an inline "Dodaj czynnik" form (Nazwa + optional Opis)
+  that POSTs `{ name, description, category: "/api/exposure-categories/{id}"
+  }` to /api/exposure-factors; on success, appends the created factor to that
+  category's list and resets the form. Client-side validation
+  requires a non-blank Nazwa ("Nazwa jest wymagana.") before submitting.
+  Category headers/names are not editable or removable - no UI for that.
+- Files changed: frontend/src/pages/ExposureFactorsPage.tsx, prd.json,
+  progress.txt.
+- Verified: `docker compose exec node npm run typecheck` passes (tsc
+  --noEmit, no errors). Used playwright-cli as admin@hr-portal.local:
+  /exposure-factors renders all 5 categories (I-V) in order with their seeded
+  factors (11/8/10/7/11 items matching US-017's fixtures); added "Test
+  Factor" (with description "Test description") to category I via its inline
+  form - appeared at the end of the list and the form reset; clicked "Usuń"
+  on it, confirmed the Polish confirm dialog text
+  (`Czy na pewno usunąć czynnik "Test Factor"?`), accepted it, and the row
+  disappeared (DELETE -> 204).
+- **Learnings for future iterations:**
+  - No new backend tests/changes needed - this story only consumed the
+    US-018 API surface from the frontend.
+  - US-022 (Referral creation form) will also need to render the 5 categories
+    with factor checkboxes from GET /api/exposure-categories - the
+    `CategoryRow`/`FactorRow` shapes defined in ExposureFactorsPage.tsx
+    (`{id, code, name, sortOrder, factors: [{id, name, description}]}` /
+    `{id, name, description}`) can be reused/duplicated for that form.
+---
