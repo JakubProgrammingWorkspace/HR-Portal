@@ -614,3 +614,47 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
     Layout.tsx's navItems - RequireAdmin only guards the route, it doesn't
     hide the link.
 ---
+
+## 2026-06-12 - US-012
+- Added App\Entity\Company (id, name, nip, street, city, postalCode,
+  createdAt) with an #[ApiResource] exposing GetCollection, Get, Post, Patch,
+  Delete - no extra access_control needed, the existing catch-all
+  `^/api -> IS_AUTHENTICATED_FULLY` rule covers /api/companies for any
+  authenticated user.
+- Post and Patch share a single src/Dto/CompanyInput.php (name, nip, street,
+  city, postalCode, all `#[Assert\NotBlank]`; nip additionally
+  `#[Assert\Regex(pattern: '/^\d{10}$/')]` with a Polish message), each with
+  its own processor (CompanyCreateProcessor/CompanyUpdateProcessor, the latter
+  re-fetching via CompanyRepository::find($uriVariables['id']) per the
+  established Patch pattern) delegating to src/Service/CompanyService.php
+  (createCompany/updateCompany/deleteCompany - persist/flush only for now;
+  US-014 will extend deleteCompany with the linked-Employees 409 check).
+- Generated migrations/Version20260612220942.php (creates the `company`
+  table) and ran it against both the dev and test databases.
+- Files changed: backend/src/Entity/Company.php (new),
+  backend/src/Repository/CompanyRepository.php (new),
+  backend/src/Dto/CompanyInput.php (new),
+  backend/src/Service/CompanyService.php (new),
+  backend/src/State/{CompanyCreateProcessor,CompanyUpdateProcessor,
+  CompanyDeleteProcessor}.php (new),
+  backend/migrations/Version20260612220942.php (new),
+  backend/tests/Api/CompanyCrudTest.php (new), prd.json, progress.txt.
+- Verified: `bin/console lint:container` OK, `php -l` clean on all new files,
+  `doctrine:schema:validate` in sync, `docker compose exec -e APP_ENV=test
+  php bin/phpunit` -> 20 tests, 52 assertions, OK (3 new CompanyCrudTest tests:
+  create with valid NIP, reject invalid (3-digit) NIP with a 422 on the `nip`
+  propertyPath, and delete). Manually curled the running stack: POST
+  /api/companies -> 201, GET /api/companies -> lists it, PATCH (with
+  application/merge-patch+json) -> 200 updated, DELETE -> 204, and POST with
+  `nip: "123"` -> 422 with the Polish "NIP musi składać się z 10 cyfr."
+  message.
+- **Learnings for future iterations:**
+  - Reusing one input DTO for both Post and Patch (CompanyInput) is fine when
+    all fields are required either way - PATCH via this DTO is effectively a
+    full replace (every field must be resent), not a partial merge. If a
+    future story needs true partial PATCH semantics for Company, switch to a
+    separate nullable-fields update DTO like UserUpdateInput.
+  - No uniqueness constraint was added on Company.nip - the AC for US-012
+    only requires the 10-digit format, not uniqueness; revisit if a later
+    story requires it.
+---

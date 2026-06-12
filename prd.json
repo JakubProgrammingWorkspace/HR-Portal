@@ -189,7 +189,7 @@
         "Tests pass (PHPUnit covers create, NIP validation failure, and delete)"
       ],
       "priority": 12,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
