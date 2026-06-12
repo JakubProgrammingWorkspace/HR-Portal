@@ -658,3 +658,42 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
     only requires the 10-digit format, not uniqueness; revisit if a later
     story requires it.
 ---
+
+## 2026-06-13 - US-013
+- Replaced the frontend/src/pages/CompaniesPage.tsx placeholder with a full
+  panel: fetches GET /api/companies on load and renders a table (Nazwa, NIP,
+  Adres - "street, postalCode city" - and Akcje/Usuń), with a "Brak firm."
+  empty-state row.
+- Added an always-visible "Dodaj firmę" form above the table (not a modal):
+  fields Nazwa, NIP, Ulica, Miasto, Kod pocztowy. Client-side validation
+  mirrors backend constraints (all NotBlank, NIP must match `/^\d{10}$/`,
+  message "NIP musi składać się z 10 cyfr." matching the backend's
+  CompanyInput regex message exactly) and is shown per-field in Polish before
+  any API call. On submit, POSTs to /api/companies; on success prepends the
+  created company to the list and resets the form; on a 422 response, maps
+  `violations[].propertyPath` -> `.message` onto the same per-field error
+  slots (extractFieldErrors helper); on other errors, shows `detail` in a
+  generic banner (extractErrorMessage, same pattern as UsersPage).
+- "Usuń" per row uses `window.confirm()` with a Polish message
+  ("Czy na pewno usunąć firmę {name}?") before calling
+  DELETE /api/companies/{id}, then removes the row from local state on 204.
+- Files changed: frontend/src/pages/CompaniesPage.tsx, prd.json, progress.txt.
+- Verified: `docker compose exec node npm run typecheck` passes (tsc
+  --noEmit, no errors). Used playwright-cli as admin@hr-portal.local:
+  /companies renders the form + empty table ("Brak firm."); submitting the
+  empty form shows all 5 Polish "...jest wymagan(y/a/e)." messages; entering
+  NIP "123" shows "NIP musi składać się z 10 cyfr." (client-side, no API
+  call); correcting NIP to "1234563218" with the other fields filled in
+  succeeds - the new company appears in the table and the form resets;
+  clicking "Usuń" shows the confirm dialog with the company name, and
+  accepting it removes the row (back to "Brak firm.").
+- **Learnings for future iterations:**
+  - GET /api/companies returns a plain JSON array (not a Hydra/JSON-LD
+    collection with `member`/`totalItems`) - same as /api/users and /api/roles
+    - `(await response.json()) as T[]` works directly. US-014/US-015
+    (paginated /api/employees) may differ since its AC explicitly calls out
+    pagination; check the actual response shape before assuming the same.
+  - CompanyInput's NIP regex message ("NIP musi składać się z 10 cyfr.") is
+    now duplicated client-side in CompaniesPage.tsx's `validate()` - if the
+    backend message ever changes, update both places.
+---
