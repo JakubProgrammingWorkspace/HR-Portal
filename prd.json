@@ -95,7 +95,7 @@
         "Tests pass (PHPUnit functional tests cover valid login, invalid credentials, and inactive user)"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

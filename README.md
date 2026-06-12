@@ -37,13 +37,20 @@ services / thin controllers) and a React + Tailwind CSS frontend.
    docker compose exec php bin/console doctrine:migrations:migrate --no-interaction
    ```
 
-4. Load fixtures (seed roles, default admin user, exposure factors catalogue, etc.):
+4. Generate the JWT signing keys used for authentication (writes
+   `backend/config/jwt/{private,public}.pem`, gitignored):
+
+   ```bash
+   docker compose exec php bin/console lexik:jwt:generate-keypair --skip-if-exists
+   ```
+
+5. Load fixtures (seed roles, default admin user, exposure factors catalogue, etc.):
 
    ```bash
    docker compose exec php bin/console doctrine:fixtures:load --no-interaction
    ```
 
-5. Stop the stack:
+6. Stop the stack:
 
    ```bash
    docker compose down
@@ -57,6 +64,14 @@ After loading fixtures, log in with:
 - **Password:** `admin123`
 
 (see `backend/src/DataFixtures/AppFixtures.php`)
+
+## Authentication
+
+`POST /api/login` accepts `{ "email": "...", "password": "..." }` and returns
+`{ "token": "<jwt>" }` on success (401 on invalid credentials or an inactive
+account). All other `/api/*` routes (except `/api/login` and `/api/docs`)
+require an `Authorization: Bearer <token>` header. The token TTL defaults to
+3600 seconds and is configurable via `JWT_TOKEN_TTL` in `.env`.
 
 ## Validating the Docker setup
 

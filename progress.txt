@@ -234,3 +234,60 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
     container via `$container->get(AppFixtures::class)` - no need to
     manually instantiate or wire dependencies in tests.
 ---
+
+## 2026-06-12 - US-006
+- A prior iteration had already implemented most of this story (uncommitted):
+  required `lexik/jwt-authentication-bundle` (^3.2), registered the bundle,
+  added `backend/config/packages/lexik_jwt_authentication.yaml` (keys/TTL
+  from `%env()%` vars, all already present in `.env`/`.env.example`/
+  docker-compose.yml since US-001), generated the RSA keypair into
+  `backend/config/jwt/{private,public}.pem` (gitignored), and updated
+  `security.yaml`: `login` firewall (`^/api/login`, stateless, json_login ->
+  lexik success/failure handlers, `App\Security\UserChecker`), `api` firewall
+  (`^/api`, stateless, `jwt: ~`, same UserChecker), and access_control rules
+  (`/api/login` and `/api/docs` are PUBLIC_ACCESS, all other `/api/*` require
+  IS_AUTHENTICATED_FULLY).
+- Also already in place: `src/Controller/SecurityController.php` (placeholder
+  `/api/login` route so `api_login` exists for json_login's check_path - the
+  handler intercepts the request before the controller body runs),
+  `src/Security/UserChecker.php` (rejects inactive users with a Polish
+  message via CustomUserMessageAccountStatusException), and
+  `src/EventListener/JwtCreatedListener.php` (adds id/email/roles into the
+  JWT payload via `lexik_jwt_authentication.on_jwt_created`).
+- `tests/Security/LoginTest.php` was already written, covering: valid login
+  returns a token whose payload has id/email/roles incl. ROLE_ADMIN; invalid
+  password -> 401; inactive user -> 401 with no token; unauthenticated
+  GET /api/health -> 401; authenticated GET /api/health (Bearer token) -> 200.
+- This iteration: verified the whole story end-to-end rather than re-doing
+  work - `bin/console lint:container` OK, `php -l` clean on all new files,
+  `docker compose exec -e APP_ENV=test php bin/phpunit` -> 6 tests, 13
+  assertions, OK (the 5 LoginTest tests + the existing AppFixturesTest).
+  Manually curled the running stack: GET /api/health -> 401 without a token,
+  POST /api/login with admin credentials -> 200 + JWT, GET /api/health with
+  `Authorization: Bearer <token>` -> 200, POST /api/login with a wrong
+  password -> 401.
+- Added README documentation: a new step to generate the JWT keypair
+  (`bin/console lexik:jwt:generate-keypair --skip-if-exists`) between the
+  migrations step and the fixtures step, and a new "Authentication" section
+  documenting `POST /api/login` request/response shape, the
+  `Authorization: Bearer` requirement, and the configurable `JWT_TOKEN_TTL`.
+- Files changed: backend/{.gitignore,composer.json,composer.lock,
+  symfony.lock,config/bundles.php,config/packages/security.yaml,
+  config/packages/lexik_jwt_authentication.yaml,
+  src/Controller/SecurityController.php,src/Security/UserChecker.php,
+  src/EventListener/JwtCreatedListener.php,tests/Security/LoginTest.php},
+  README.md, prd.json, progress.txt.
+- **Learnings for future iterations:**
+  - `backend/config/jwt/{private,public}.pem` are gitignored and were
+    generated locally as part of this work - they exist in this container's
+    bind-mounted backend/ but are NOT committed. Anyone setting up the repo
+    fresh must run `bin/console lexik:jwt:generate-keypair --skip-if-exists`
+    (now documented in README step 4) before `/api/login` will work.
+  - The `login` and `api` firewalls both need `App\Security\UserChecker` set
+    as `user_checker` - it's only invoked during the authentication step each
+    firewall performs, so setting it on just one would miss the other path
+    (json_login vs JWT token re-authentication).
+  - US-007's voter and any future `#[IsGranted]` attributes can rely on
+    `IS_AUTHENTICATED_FULLY` already being enforced globally for `/api/*` via
+    access_control - no need to repeat that check.
+---
