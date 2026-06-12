@@ -271,7 +271,7 @@
         "Tests pass (PHPUnit test asserts 5 categories exist with the expected codes after loading fixtures)"
       ],
       "priority": 17,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

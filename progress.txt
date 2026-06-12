@@ -875,3 +875,33 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
     AppFixtures::load()/ObjectManager, no new fixture class needed unless
     preferred for organization.
 ---
+
+## 2026-06-13 - US-017
+- Extended src/DataFixtures/AppFixtures.php with a `EXPOSURE_CATEGORIES`
+  const array (code => {name, factors: list<string>}) covering the 5 fixed
+  categories (I. Czynniki fizyczne .. V. Inne czynniki, w tym niebezpieczne)
+  from Annex 3 of the 1996 regulation, each with the exact factor lists from
+  the AC (11/8/10/7/11 factors respectively). load() now also persists an
+  ExposureCategory (code, name, sortOrder 1..5 in array order) and one
+  ExposureFactor per listed name (linked via setCategory()) for each entry,
+  alongside the existing Role/User fixtures - all in the same flush().
+- tests/DataFixtures/AppFixturesTest.php: added
+  testExposureCategoriesAreSeededAfterLoadingFixtures, which purges+loads
+  AppFixtures and asserts exactly 5 ExposureCategory rows exist with codes
+  ["I","II","III","IV","V"] in sortOrder, the first category's name is
+  "Czynniki fizyczne", and its factors include "Hałas".
+- Files changed: backend/src/DataFixtures/AppFixtures.php,
+  backend/tests/DataFixtures/AppFixturesTest.php, prd.json, progress.txt.
+- Verified: `php -l` clean on both changed files, `bin/console
+  lint:container` OK, `docker compose exec -e APP_ENV=test php bin/phpunit`
+  -> 25 tests, 68 assertions, OK (1 new test). Ran `bin/console
+  doctrine:fixtures:load --no-interaction` against the dev DB and confirmed
+  via psql: exposure_category has exactly 5 rows (codes I-V, sortOrder 1-5,
+  correct Polish names) and exposure_factor has 11/8/10/7/11 rows per
+  category respectively (matching the AC factor counts for I-V).
+- **Learnings for future iterations:**
+  - US-018 (Exposure factor API) can rely on this seed data being present
+    after `doctrine:fixtures:load` - GET /api/exposure-categories should
+    return the 5 categories above with their nested factors once the API
+    resource/operations are added.
+---
