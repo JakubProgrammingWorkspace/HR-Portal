@@ -286,7 +286,7 @@
         "Tests pass (PHPUnit covers listing categories with factors, adding a factor, and removing a factor)"
       ],
       "priority": 18,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

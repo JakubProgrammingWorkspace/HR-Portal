@@ -101,6 +101,25 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
   `ConflictHttpException` with a Polish message before remove()+flush(). Same
   pattern will apply to ExposureFactorService::delete (US-018/US-020) checking
   ReferralExposureFactor references.
+- API Platform's default route path for a multi-word entity (e.g.
+  ExposureCategory) is snake_case (`/api/exposure_categories`), not the
+  kebab-case the PRD's AC literally specifies (`/api/exposure-categories`).
+  When an AC gives an exact kebab-case path, set an explicit `uriTemplate` on
+  every operation: `new GetCollection(uriTemplate: '/exposure-categories')`,
+  `new Get(uriTemplate: '/exposure-categories/{id}')`,
+  `new Post(uriTemplate: '/exposure-factors', ...)`,
+  `new Delete(uriTemplate: '/exposure-factors/{id}', ...)`. Verify with
+  `bin/console debug:router | grep <name>`.
+- To expose a Doctrine OneToMany inverse-side collection as *nested embedded
+  data* (not an array of IRIs) - e.g. ExposureCategory#getFactors() returning
+  each ExposureFactor's {id, name, description} inline in
+  GET /api/exposure-categories - mark the `Collection<Entity>` property
+  `#[Ignore]` and add a separate getter that maps the collection to plain PHP
+  arrays (not entity objects); the serializer then emits nested JSON objects
+  directly with no IRI conversion. The owning ManyToOne side must add
+  `inversedBy: 'theCollectionProperty'` or
+  `doctrine:schema:validate` fails ("inverse side ... does not contain the
+  required inversedBy attribute") even though no DB column changes.
 
 ## 2026-06-12 - US-001
 - Implemented the Docker Compose stack: postgres (16-alpine, with healthcheck),
@@ -904,4 +923,68 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
     after `doctrine:fixtures:load` - GET /api/exposure-categories should
     return the 5 categories above with their nested factors once the API
     resource/operations are added.
+---
+
+## 2026-06-13 - US-018
+- Added #[ApiResource] to App\Entity\ExposureCategory: GetCollection/Get only
+  (read-only, no Post/Patch/Delete), ordered by `sortOrder` ASC via
+  `#[ApiResource(order: ['sortOrder' => 'ASC'])]`, with explicit kebab-case
+  `uriTemplate`s (`/exposure-categories`, `/exposure-categories/{id}`). Added
+  an `#[Ignore]`d inverse-side `Collection<ExposureFactor> $factorEntities`
+  (OneToMany mappedBy: 'category', ordered by id) and a `getFactors(): array`
+  getter that maps each factor to a plain `{id, name, description}` array, so
+  GET /api/exposure-categories returns each category with its factors nested
+  inline (not as IRIs).
+- Added #[ApiResource] to App\Entity\ExposureFactor: GetCollection, Get, Post,
+  Delete with explicit kebab-case `uriTemplate`s (`/exposure-factors`,
+  `/exposure-factors/{id}`). ExposureFactor::$category now has
+  `inversedBy: 'factorEntities'` (required by doctrine:schema:validate for the
+  new inverse side, no DB change).
+- Post uses src/Dto/ExposureFactorInput.php (name: NotBlank; category: NotBlank
+  + new `#[ValidExposureCategoryReference]`; description: nullable, optional) +
+  src/State/ExposureFactorCreateProcessor.php, following the
+  ValidCompanyReference/EmployeeCreateProcessor IRI pattern (new
+  src/Validator/{ValidExposureCategoryReference,
+  ValidExposureCategoryReferenceValidator}.php mirror
+  ValidCompanyReference(Validator) but check `ExposureCategory`).
+- src/Service/ExposureFactorService.php: createFactor (persist+flush) and
+  deleteFactor (remove+flush, no referencing-entity guard yet - per the AC,
+  ReferralExposureFactor doesn't exist until US-020, so US-021 must add the
+  `count(['factor' => $factor]) > 0` -> 409 "Nie można usunąć czynnika
+  narażenia..." guard at that point). src/State/{ExposureFactorCreateProcessor,
+  ExposureFactorDeleteProcessor}.php are thin processors delegating to it.
+- Files changed: backend/src/Entity/{ExposureCategory,ExposureFactor}.php,
+  backend/src/Dto/ExposureFactorInput.php (new),
+  backend/src/Validator/{ValidExposureCategoryReference,
+  ValidExposureCategoryReferenceValidator}.php (new),
+  backend/src/Service/ExposureFactorService.php (new),
+  backend/src/State/{ExposureFactorCreateProcessor,
+  ExposureFactorDeleteProcessor}.php (new),
+  backend/tests/Api/ExposureFactorCrudTest.php (new), prd.json, progress.txt.
+- Verified: `bin/console lint:container` OK, `php -l` clean on all new/changed
+  files, `doctrine:schema:validate` in sync (after adding `inversedBy`),
+  `docker compose exec -e APP_ENV=test php bin/phpunit` -> 29 tests, 83
+  assertions, OK (4 new ExposureFactorCrudTest tests: list categories with
+  nested factors incl. "Hałas" in category I, add a factor with a valid
+  category IRI, reject a non-existent category IRI with 422 on `category`,
+  remove a factor). Manually curled the running stack: GET
+  /api/exposure-categories -> 200 with 5 categories (I-V) each with a nested
+  `factors` array of {id,name,description}; POST /api/exposure-factors with a
+  valid category IRI -> 201; DELETE that factor -> 204; POST without a
+  `category` -> 422 "This value should not be blank." on `category`; GET
+  /api/docs -> 200.
+- **Learnings for future iterations:**
+  - See the two new Codebase Patterns bullets above (kebab-case `uriTemplate`
+    override, and `#[Ignore]`d OneToMany -> plain-array nested getter +
+    required `inversedBy`).
+  - GET /api/exposure-categories now returns each category as
+    `{id, code, name, sortOrder, factors: [{id, name, description}, ...]}` -
+    US-019 (frontend panel) can consume this directly without a separate
+    /api/exposure-factors fetch for the read/list view; use
+    /api/exposure-factors only for POST (add) and DELETE (remove).
+  - ExposureFactor's `category` field serializes as an IRI
+    (`/api/exposure-categories/{id}`) on GET /api/exposure-factors and in the
+    POST response, consistent with Employee.company - same IRI-resolution
+    Map<string,string> pattern from US-015 applies if US-019 needs to show a
+    factor's category name from a flat /api/exposure-factors list.
 ---

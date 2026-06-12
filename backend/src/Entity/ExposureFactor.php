@@ -2,9 +2,32 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Post;
+use App\Dto\ExposureFactorInput;
 use App\Repository\ExposureFactorRepository;
+use App\State\ExposureFactorCreateProcessor;
+use App\State\ExposureFactorDeleteProcessor;
 use Doctrine\ORM\Mapping as ORM;
 
+#[ApiResource(
+    operations: [
+        new GetCollection(uriTemplate: '/exposure-factors'),
+        new Get(uriTemplate: '/exposure-factors/{id}'),
+        new Post(
+            uriTemplate: '/exposure-factors',
+            input: ExposureFactorInput::class,
+            processor: ExposureFactorCreateProcessor::class,
+        ),
+        new Delete(
+            uriTemplate: '/exposure-factors/{id}',
+            processor: ExposureFactorDeleteProcessor::class,
+        ),
+    ],
+)]
 #[ORM\Entity(repositoryClass: ExposureFactorRepository::class)]
 class ExposureFactor
 {
@@ -16,7 +39,7 @@ class ExposureFactor
     #[ORM\Column(length: 255)]
     private string $name;
 
-    #[ORM\ManyToOne(targetEntity: ExposureCategory::class)]
+    #[ORM\ManyToOne(targetEntity: ExposureCategory::class, inversedBy: 'factorEntities')]
     #[ORM\JoinColumn(nullable: false)]
     private ExposureCategory $category;
 
