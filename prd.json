@@ -127,7 +127,7 @@
         "Verify in browser using the playwright-cli skill: log in with the seeded admin credentials and reach the dashboard"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

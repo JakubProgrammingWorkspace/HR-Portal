@@ -364,3 +364,57 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
     to register working routes for an entity with no extra config - API
     Platform's Doctrine ORM state provider handles these by default.
 ---
+
+## 2026-06-12 - US-008
+- Added frontend/src/api/client.ts: a centralized API client with
+  getToken/setToken/clearToken (localStorage key `hr_portal_token`),
+  `login(email, password)` (POST /api/login against
+  `import.meta.env.VITE_API_URL`, throws `ApiError` with the Polish message
+  "Nieprawidłowy e-mail lub hasło" on a non-2xx response), and `apiFetch(path,
+  options)` which attaches `Authorization: Bearer <token>` to every request
+  and, on a 401 response, clears the token and redirects to /login. Added
+  frontend/src/vite-env.d.ts (`/// <reference types="vite/client" />`) so
+  `import.meta.env.VITE_API_URL` typechecks.
+- Added frontend/src/components/RequireAuth.tsx: a route-guard `<Outlet/>`
+  wrapper that renders `<Navigate to="/login" replace/>` if no token is
+  present in localStorage.
+- frontend/src/App.tsx: wrapped the `<Layout/>` route tree in
+  `<Route element={<RequireAuth/>}>` so all panel routes
+  (/dashboard,/users,/companies,/employees,/exposure-factors,/referrals)
+  require a token; /login stays outside the guard.
+- frontend/src/pages/LoginPage.tsx: converted to a controlled form (email/
+  password state + submit handler) that calls `login()`, stores the token via
+  `setToken()`, and navigates to /dashboard on success; on failure shows the
+  Polish inline error from `ApiError.message` in a `<p class="text-red-600">`.
+- frontend/src/components/Layout.tsx: "Wyloguj" button now calls
+  `clearToken()` and navigates to /login.
+- Files changed: frontend/src/{api/client.ts (new),
+  components/RequireAuth.tsx (new), vite-env.d.ts (new), App.tsx,
+  components/Layout.tsx, pages/LoginPage.tsx}, .gitignore (added
+  `.playwright-cli/`), prd.json, progress.txt.
+- Verified: `docker compose exec node npm run typecheck` passes (tsc
+  --noEmit, no errors). Used playwright-cli against the running stack: loaded
+  /login, logged in as admin@hr-portal.local/admin123 -> redirected to
+  /dashboard with the token stored in localStorage under
+  `hr_portal_token`; clicked "Wyloguj" -> redirected to /login and the token
+  was removed; confirmed visiting /users or /dashboard directly while logged
+  out redirects to /login; submitted the login form with a wrong password and
+  confirmed the inline "Nieprawidłowy e-mail lub hasło" message appears.
+- **Learnings for future iterations:**
+  - The node container already has `VITE_API_URL=http://localhost:8000` set
+    by docker-compose.yml (from `APP_URL`), so `frontend/src/api/client.ts`
+    reading `import.meta.env.VITE_API_URL` works out of the box - no .env
+    change needed.
+  - frontend/src/api/client.ts is now the place for all future API calls:
+    use `apiFetch(path, options)` (not raw `fetch`) so the
+    Authorization header and 401->/login redirect are handled consistently.
+    `getToken()/setToken()/clearToken()` are the single source of truth for
+    the JWT in localStorage (key `hr_portal_token`).
+  - RequireAuth.tsx only checks token *presence*, not validity/expiry -
+    expired/invalid tokens are caught at the API layer (apiFetch's 401
+    handling), which then clears the token and redirects. This is sufficient
+    for now; no JWT decoding/expiry-checking on the frontend.
+  - playwright-cli writes a `.playwright-cli/` directory with snapshots/logs
+    into the repo root - now gitignored; remove it after use if it appears
+    untracked.
+---

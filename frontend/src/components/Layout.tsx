@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { clearToken } from '../api/client';
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard' },
@@ -10,6 +11,13 @@ const navItems = [
 ];
 
 export default function Layout() {
+  const navigate = useNavigate();
+
+  function handleLogout() {
+    clearToken();
+    navigate('/login', { replace: true });
+  }
+
   return (
     <div className="flex h-screen bg-gray-100">
       <aside className="flex w-64 flex-col border-r border-gray-200 bg-white">
@@ -37,6 +45,7 @@ export default function Layout() {
             <span className="text-sm text-gray-600">Użytkownik</span>
             <button
               type="button"
+              onClick={handleLogout}
               className="text-sm font-medium text-blue-600 hover:text-blue-800"
             >
               Wyloguj
