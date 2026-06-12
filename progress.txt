@@ -78,6 +78,29 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
   decoding) and `<RequireAdmin>` for admin-only routes, plus the
   `application/merge-patch+json` Content-Type requirement for PATCH via
   apiFetch - read it before building more admin panels or PATCH calls.
+- For an input DTO field that's an IRI reference to another resource (e.g.
+  Employee's `company`), validate it with a custom Constraint +
+  ConstraintValidator (e.g. ValidCompanyReference) that injects
+  `ApiPlatform\Metadata\IriConverterInterface` and calls
+  `getResourceFromIri($value)` in a try/catch for
+  `ApiPlatform\Metadata\Exception\InvalidArgumentException` /
+  `ItemNotFoundException`, adding a Polish violation on that property if it
+  throws or returns the wrong entity type. The Create/Update processors then
+  call `getResourceFromIri()` again (validation already guarantees success,
+  so just `\assert($x instanceof TargetEntity)`) to get the entity to pass
+  into the *Service. Reusable for US-021 (Referral's `employee` and each
+  ReferralExposureFactor's `factor` IRI).
+- To get the authenticated user as an `App\Entity\User` inside a Create
+  processor (e.g. for a `createdBy` field), inject
+  `Symfony\Bundle\SecurityBundle\Security` and call `->getUser()`, then
+  `\assert($user instanceof User)`.
+- A service that needs a "reject delete if referenced elsewhere" 409 guard
+  (e.g. CompanyService::deleteCompany checking for linked Employees) just
+  injects the other entity's repository and calls
+  `$repository->count(['<association>' => $entity]) > 0`, throwing
+  `ConflictHttpException` with a Polish message before remove()+flush(). Same
+  pattern will apply to ExposureFactorService::delete (US-018/US-020) checking
+  ReferralExposureFactor references.
 
 ## 2026-06-12 - US-001
 - Implemented the Docker Compose stack: postgres (16-alpine, with healthcheck),
@@ -696,4 +719,70 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
   - CompanyInput's NIP regex message ("NIP musi składać się z 10 cyfr.") is
     now duplicated client-side in CompaniesPage.tsx's `validate()` - if the
     backend message ever changes, update both places.
+---
+
+## 2026-06-13 - US-014
+- Added App\Entity\Employee (id, firstName, lastName, pesel (len 11), phone,
+  email, address (text), company (ManyToOne -> Company, required),
+  createdBy (ManyToOne -> User, required), createdAt) with #[ApiResource]
+  exposing GetCollection (paginated - API Platform's default pagination
+  applies, no extra config needed), Get, Post, Patch, Delete - covered by the
+  existing catch-all `^/api -> IS_AUTHENTICATED_FULLY` rule (any authenticated
+  user). Added `#[ApiFilter(SearchFilter::class, properties: ['firstName' =>
+  'partial', 'lastName' => 'partial', 'company' => 'exact'])]` - SearchFilter
+  handles filtering the `company` ManyToOne by IRI automatically
+  (`?company=/api/companies/3`).
+- src/Dto/EmployeeInput.php: firstName/lastName/phone/address/email all
+  `#[Assert\NotBlank]`; email also `#[Assert\Email]`; pesel
+  `#[Assert\Regex(pattern: '/^\d{11}$/', message: 'PESEL musi składać się z 11
+  cyfr.')]`; company is a string IRI validated by the new
+  `#[ValidCompanyReference]` constraint (src/Validator/ValidCompanyReference.php
+  + ValidCompanyReferenceValidator.php - see new Codebase Patterns bullet
+  about IRI-reference validation).
+- src/Service/EmployeeService.php (createEmployee/updateEmployee/
+  deleteEmployee) + src/State/{EmployeeCreateProcessor,EmployeeUpdateProcessor,
+  EmployeeDeleteProcessor}.php follow the established
+  input-DTO+processor+service pattern; one EmployeeInput reused for Post and
+  Patch (full-replace semantics, like CompanyInput). CreateProcessor resolves
+  `data->company` via IriConverterInterface and the current user via
+  `Security::getUser()` to set `createdBy`.
+- CompanyService::deleteCompany now injects EmployeeRepository and throws
+  `ConflictHttpException` ("Nie można usunąć firmy, ponieważ ma przypisanych
+  pracowników.") with a 409 if `count(['company' => $company]) > 0`.
+- Generated migrations/Version20260612221844.php (creates `employee` table +
+  FKs to `company` and `"user"`) and ran it against both dev and test
+  databases.
+- Files changed: backend/src/Entity/Employee.php (new),
+  backend/src/Repository/EmployeeRepository.php (new),
+  backend/src/Dto/EmployeeInput.php (new),
+  backend/src/Validator/{ValidCompanyReference,ValidCompanyReferenceValidator}.php
+  (new), backend/src/Service/EmployeeService.php (new),
+  backend/src/State/{EmployeeCreateProcessor,EmployeeUpdateProcessor,
+  EmployeeDeleteProcessor}.php (new), backend/src/Service/CompanyService.php,
+  backend/migrations/Version20260612221844.php (new),
+  backend/tests/Api/EmployeeCrudTest.php (new), prd.json, progress.txt.
+- Verified: `bin/console lint:container` OK, `php -l` clean on all new/changed
+  files, `doctrine:schema:validate` in sync, `docker compose exec -e
+  APP_ENV=test php bin/phpunit` -> 24 tests, 64 assertions, OK (4 new
+  EmployeeCrudTest tests: create with company link + createdBy set to the
+  authenticated admin, reject invalid (3-digit) PESEL with 422 on `pesel`,
+  reject a non-existent company IRI with 422 on `company`, and
+  delete-company-with-employees -> 409 with the company still present).
+  Manually curled the running stack: POST /api/employees with a valid company
+  IRI -> 201 (company + createdBy returned as IRIs), GET /api/employees and
+  GET /api/employees?firstName=Jan both return the new employee, PATCH (with
+  application/merge-patch+json, full EmployeeInput body) -> 200 updated, then
+  DELETE /api/companies/{id} while it still had the employee -> 409, and after
+  removing the employee the company deleted cleanly (204). Test data cleaned
+  up afterwards.
+- **Learnings for future iterations:**
+  - See the three new Codebase Patterns bullets above (IRI-reference
+    validation via IriConverterInterface, getting the current User via
+    Security::getUser() in a processor, and the
+    repository->count()-based 409 delete guard) - all three are directly
+    reusable for US-018/US-020/US-021 (ExposureFactor delete guard, Referral's
+    employee/factor IRI fields, Referral's createdBy).
+  - API Platform's GetCollection is paginated by default with no extra
+    config - "(paginated)" in an AC doesn't require any special setup beyond
+    not disabling pagination.
 ---

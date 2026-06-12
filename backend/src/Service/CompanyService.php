@@ -4,12 +4,16 @@ namespace App\Service;
 
 use App\Dto\CompanyInput;
 use App\Entity\Company;
+use App\Repository\EmployeeRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 class CompanyService
 {
-    public function __construct(private readonly EntityManagerInterface $entityManager)
-    {
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        private readonly EmployeeRepository $employeeRepository,
+    ) {
     }
 
     public function createCompany(CompanyInput $input): Company
@@ -34,6 +38,10 @@ class CompanyService
 
     public function deleteCompany(Company $company): void
     {
+        if ($this->employeeRepository->count(['company' => $company]) > 0) {
+            throw new ConflictHttpException('Nie można usunąć firmy, ponieważ ma przypisanych pracowników.');
+        }
+
         $this->entityManager->remove($company);
         $this->entityManager->flush();
     }

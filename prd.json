@@ -223,7 +223,7 @@
         "Tests pass (PHPUnit covers employee creation with company link, PESEL validation, and the company-delete-with-employees 409 case)"
       ],
       "priority": 14,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
