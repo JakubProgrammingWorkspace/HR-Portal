@@ -2,12 +2,35 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Post;
+use App\Dto\ReferralInput;
 use App\Enum\ExaminationType;
 use App\Repository\ReferralRepository;
+use App\State\ReferralCreateProcessor;
+use App\State\ReferralDeleteProcessor;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Ignore;
 
+#[ApiResource(
+    operations: [
+        new GetCollection(),
+        new Get(),
+        new Post(
+            input: ReferralInput::class,
+            processor: ReferralCreateProcessor::class,
+        ),
+        new Delete(
+            processor: ReferralDeleteProcessor::class,
+        ),
+    ],
+    order: ['issueDate' => 'DESC'],
+)]
 #[ORM\Entity(repositoryClass: ReferralRepository::class)]
 class Referral
 {
@@ -51,6 +74,7 @@ class Referral
     /**
      * @var Collection<int, ReferralExposureFactor>
      */
+    #[Ignore]
     #[ORM\OneToMany(mappedBy: 'referral', targetEntity: ReferralExposureFactor::class, cascade: ['persist', 'remove'])]
     private Collection $exposureFactors;
 
@@ -194,5 +218,20 @@ class Referral
         }
 
         return $this;
+    }
+
+    /**
+     * @return list<array{factor: int, factorName: string, exposureDetails: string}>
+     */
+    public function getExposureFactorDetails(): array
+    {
+        return array_values(array_map(
+            static fn (ReferralExposureFactor $f): array => [
+                'factor' => $f->getFactor()->getId(),
+                'factorName' => $f->getFactor()->getName(),
+                'exposureDetails' => $f->getExposureDetails(),
+            ],
+            $this->exposureFactors->toArray(),
+        ));
     }
 }

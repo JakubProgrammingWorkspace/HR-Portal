@@ -141,6 +141,33 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
   before a single `persist($referral)` + `flush()`; cascade persist will
   insert the join rows in the same transaction without persisting each one
   individually.
+- `phpdocumentor/reflection-docblock`/`phpstan/phpdoc-parser` are NOT
+  installed, so the serializer/PropertyInfo cannot denormalize a JSON array of
+  objects into `list<SomeDto>` via a `@var SomeDto[]` doc comment - a DTO
+  property meant to receive an array of nested objects (e.g. ReferralInput's
+  `exposureFactors: { factor: IRI, exposureDetails: string }[]`) must stay
+  typed as plain `array` (each element arrives as an associative array, e.g.
+  `$item['factor']`) and be resolved/validated manually in the
+  *Service (IriConverter + a thrown
+  `Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException`
+  with a Polish message for an invalid/missing nested `factor` IRI - API
+  Platform renders this as a 422 with that message in `detail`, same as the
+  409 ConflictHttpException pattern).
+- For a DTO field backed by a PHP backed enum's allowed values (e.g.
+  ReferralInput::examinationType vs ExaminationType), add a
+  `public static function values(): array` to the enum (`array_map(fn($c) =>
+  $c->value, self::cases())`) and use
+  `#[Assert\Choice(callback: [ExaminationType::class, 'values'], message:
+  '...')]` on the DTO string property - keeps the allowed values in one place
+  and gives a 422 with `violations[0].propertyPath` on the field for any other
+  value.
+- To expose a Doctrine OneToMany join-entity collection that itself has no
+  #[ApiResource] (e.g. Referral's `exposureFactors: Collection<
+  ReferralExposureFactor>`) without a serializer error ("Unable to generate an
+  IRI..."), mark the collection property `#[Ignore]` and add a plain-array
+  getter (e.g. `getExposureFactorDetails(): array` returning
+  `[{factor: id, factorName, exposureDetails}, ...]`) - same
+  collection-to-plain-array pattern as ExposureCategory::getFactors().
 
 ## 2026-06-12 - US-001
 - Implemented the Docker Compose stack: postgres (16-alpine, with healthcheck),
@@ -1101,4 +1128,79 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
   - `php bin/console make:migration --no-interaction` still works (just prints
     a non-interactive-mode warning to stderr) - no need to answer a
     confirmation prompt.
+---
+
+## 2026-06-13 - US-021
+- Added #[ApiResource] to App\Entity\Referral: GetCollection, Get, Post
+  (input: ReferralInput::class, processor: ReferralCreateProcessor::class),
+  Delete (processor: ReferralDeleteProcessor::class), with
+  `order: ['issueDate' => 'DESC']` (default routes `/api/referrals` and
+  `/api/referrals/{id}` already match the AC's kebab-case path - "Referral"
+  pluralizes to "referrals" without needing an explicit `uriTemplate`).
+  `$exposureFactors` marked `#[Ignore]` (ReferralExposureFactor has no
+  #[ApiResource]) with a new `getExposureFactorDetails(): array` getter
+  exposing `[{factor: id, factorName, exposureDetails}, ...]` in GET
+  responses.
+- Added App\Dto\ReferralInput: employee (string IRI, NotBlank + new
+  `#[ValidEmployeeReference]`), examinationType (string, NotBlank +
+  `#[Assert\Choice(callback: [ExaminationType::class, 'values'], ...)]`),
+  jobPosition/jobDescription/issuePlace (NotBlank), issueDate (NotBlank +
+  `#[Assert\Date]`), exposureFactors (plain `array`, each element
+  `{factor: IRI, exposureDetails: string}` - see new Codebase Patterns bullet
+  on why this stays a plain array rather than `list<SomeDto>`). Added
+  `App\Validator\{ValidEmployeeReference,ValidEmployeeReferenceValidator}`
+  mirroring ValidCompanyReference/ValidExposureCategoryReference.
+- Added `ExaminationType::values(): array` (maps `self::cases()` to their
+  string values) for the Assert\Choice callback.
+- src/Service/ReferralService.php: createReferral(input, employee, createdBy)
+  builds the Referral (setting examinationType via `ExaminationType::from()`
+  and issueDate via `new \DateTimeImmutable($input->issueDate)`), resolves
+  each `exposureFactors[]` entry's `factor` IRI via IriConverterInterface
+  (throwing `UnprocessableEntityHttpException` with a Polish message - 422 -
+  if missing/invalid/wrong type), builds a ReferralExposureFactor per entry
+  via `$referral->addExposureFactor(...)`, then a single persist+flush
+  (cascade inserts the join rows). deleteReferral does remove+flush (cascade
+  removes the join rows).
+  src/State/{ReferralCreateProcessor,ReferralDeleteProcessor}.php are thin
+  processors following the Employee*Processor pattern (resolve `employee` IRI
+  + current user via Security::getUser() in Create; delegate straight to the
+  service in Delete).
+- No security.yaml changes needed - /api/referrals is covered by the existing
+  `^/api -> IS_AUTHENTICATED_FULLY` catch-all (any authenticated user).
+- Files changed: backend/src/Entity/Referral.php,
+  backend/src/Enum/ExaminationType.php,
+  backend/src/Dto/ReferralInput.php (new),
+  backend/src/Validator/{ValidEmployeeReference,
+  ValidEmployeeReferenceValidator}.php (new),
+  backend/src/Service/ReferralService.php (new),
+  backend/src/State/{ReferralCreateProcessor,ReferralDeleteProcessor}.php
+  (new), backend/tests/Api/ReferralCrudTest.php (new), prd.json, progress.txt.
+- Verified: `bin/console lint:container` OK, `php -l` clean on all new/changed
+  files, `doctrine:schema:validate` in sync (no entity/column changes - only
+  new operations/DTOs/services/getter), `docker compose exec -e APP_ENV=test
+  php bin/phpunit` -> 34 tests, 104 assertions, OK (4 new ReferralCrudTest
+  tests: create with 2 factors from different categories incl. createdBy =
+  admin, reject invalid examinationType with 422 on that propertyPath, reject
+  a non-existent employee IRI with 422 on `employee`, and delete). Manually
+  curled the running stack end-to-end: created a Company/Employee, POSTed
+  /api/referrals with 2 exposureFactors from categories I and II -> 201 with
+  `employee`/`createdBy` as IRIs, `examinationType: "wstepne"`, and
+  `exposureFactorDetails` listing both factors with their exposureDetails; GET
+  /api/referrals/{id} -> 200, GET /api/referrals -> array with 1 item; DELETE
+  -> 204, then GET -> 404. Cleaned up the manually-created Employee/Company
+  afterwards.
+- **Learnings for future iterations:**
+  - See the three new Codebase Patterns bullets above (plain-array DTO fields
+    + manual IRI resolution/422 for nested objects, `Assert\Choice(callback:
+    ...)` against a backed enum's `values()`, and `#[Ignore]` +
+    plain-array getter for a non-ApiResource join-entity collection).
+  - GET /api/referrals/{id} omits `pdfPath`/`pdfGeneratedAt` from the JSON
+    response when they're null (API Platform's default serialization context
+    skips null values) - US-024 should expect these keys to be absent until a
+    PDF has been generated, not present-with-null.
+  - US-023 (PDF generation) can iterate `$referral->getExposureFactors()`
+    (Collection<ReferralExposureFactor>, each with `getFactor()->getCategory()`
+    for grouping into sections I-V) directly at the PHP/Twig level - no need
+    to go through `getExposureFactorDetails()`, which is for the JSON API
+    output only.
 ---

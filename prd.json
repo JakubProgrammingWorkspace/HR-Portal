@@ -332,7 +332,7 @@
         "Tests pass (PHPUnit covers creating a referral with multiple factors across categories, validation failure for invalid examinationType, and deletion)"
       ],
       "priority": 21,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
