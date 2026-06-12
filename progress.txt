@@ -144,3 +144,48 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
     links; US-026 (route guards/role-based nav) will likely filter this list
     based on the logged-in user's roles.
 ---
+
+## 2026-06-12 - US-004
+- Added `symfony/security-bundle` (pulls in security-core for
+  UserInterface/PasswordAuthenticatedUserInterface) and configured
+  config/packages/security.yaml's `app_user_provider` to load
+  App\Entity\User by `email` (firewalls.main now uses this provider instead
+  of the default `users_in_memory`).
+- src/Entity/Role.php: id, code (unique, length 50), name, description
+  (nullable text).
+- src/Entity/User.php: implements UserInterface + PasswordAuthenticatedUserInterface;
+  id, email (unique, length 180), password, firstName, lastName,
+  isActive (bool, default true), createdAt (DateTimeImmutable, set in
+  constructor). ManyToMany to Role via a `user_role` join table
+  (addRoleEntity/removeRoleEntity/getRoleEntities manage the collection).
+  getRoles() maps the assigned Role entities to their `code` and appends
+  ROLE_USER (deduplicated) - this is what Symfony's security layer reads.
+  Table is named `"user"` (quoted, via `#[ORM\Table(name: '`user`')]`)
+  since `user` is a reserved word in PostgreSQL.
+- src/Repository/RoleRepository.php and UserRepository.php added
+  (ServiceEntityRepository); UserRepository implements
+  PasswordUpgraderInterface for automatic hash upgrades.
+- Generated migrations/Version20260612141849.php (creates role, "user",
+  user_role tables + FKs/unique indexes) and ran
+  `doctrine:migrations:migrate` successfully.
+- Files changed: backend/composer.json, backend/composer.lock,
+  backend/symfony.lock, backend/config/packages/security.yaml,
+  backend/src/Entity/{Role,User}.php,
+  backend/src/Repository/{Role,User}Repository.php,
+  backend/migrations/Version20260612141849.php, prd.json, progress.txt.
+- Verified: `bin/console lint:container` OK, `php -l` clean on all new
+  files, `doctrine:schema:validate` reports mapping + DB schema in sync,
+  GET /api/health and /api/docs still return 200 (unchanged from US-002).
+  No PHPUnit harness exists yet (introduced by US-005's test requirement).
+- **Learnings for future iterations:**
+  - Reserved-word table names (e.g. `user`) need
+    `#[ORM\Table(name: '`user`')]` (backtick-quoted) so Doctrine quotes them
+    correctly for PostgreSQL.
+  - security.yaml's `app_user_provider` (entity: App\Entity\User, property:
+    email) is now the provider for the `main` firewall - US-006 (JWT) can
+    build directly on this, just add the JWT authenticator to `main`.
+  - `composer require` inside the php container still leaves files
+    root-owned on the host bind mount - re-run
+    `docker compose exec -u root php chown -R 1000:1000 /var/www/html`
+    after every composer command (same as noted for US-002).
+---
