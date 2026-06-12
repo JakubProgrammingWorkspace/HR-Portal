@@ -27,6 +27,20 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
 - Tailwind CSS v4 is wired via the `@tailwindcss/vite` plugin (in
   vite.config.ts) — no postcss.config/tailwind.config files needed;
   frontend/src/index.css just contains `@import "tailwindcss";`.
+- security.yaml `access_control` is first-match-wins: any new path-specific
+  rule (e.g. an admin-only attribute backed by a custom Voter) must be listed
+  ABOVE the generic `^/api -> IS_AUTHENTICATED_FULLY` catch-all, or it will
+  never be reached.
+- Voter classes under src/Security/Voter/ extending Symfony's `Voter` are
+  auto-registered as `security.voter` services via autoconfigure - no manual
+  service tagging needed.
+- For entity properties exposed via API Platform where a getter returns a
+  different shape than the underlying Doctrine association (e.g. User::$roles
+  is `Collection<Role>` but `getRoles(): array<string>` per UserInterface),
+  add `#[Ignore]` (Symfony\Component\Serializer\Attribute\Ignore) to the
+  property to avoid "Unexpected non-object element in to-many relation"
+  normalizer errors; expose the desired shape under a different field name
+  if needed.
 
 ## 2026-06-12 - US-001
 - Implemented the Docker Compose stack: postgres (16-alpine, with healthcheck),
@@ -290,4 +304,63 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
   - US-007's voter and any future `#[IsGranted]` attributes can rely on
     `IS_AUTHENTICATED_FULLY` already being enforced globally for `/api/*` via
     access_control - no need to repeat that check.
+---
+
+## 2026-06-12 - US-007
+- Added src/Security/Voter/UserManagementVoter.php (extends Voter, attribute
+  `MANAGE_USERS`): grants access only if the token's user has ROLE_ADMIN in
+  getRoles(). Autoconfigure picks it up as a `security.voter` automatically
+  (extends Voter -> implements VoterInterface), no manual service tagging
+  needed.
+- security.yaml access_control: inserted
+  `{ path: ^/api/(users|roles)(/|$), roles: MANAGE_USERS }` between the
+  PUBLIC_ACCESS rules and the catch-all `^/api -> IS_AUTHENTICATED_FULLY` rule
+  (first-match-wins ordering matters here). Unauthenticated requests to
+  /api/users|roles still get 401 (same AccessDeniedException ->
+  start-authentication path as the catch-all rule); authenticated non-admins
+  get 403; admins pass through to the resource.
+- Added minimal `#[ApiResource(operations: [GetCollection, Get])]` to
+  src/Entity/User.php and src/Entity/Role.php so /api/users and /api/roles
+  exist and return 200 for the voter test (US-009/US-010 will add
+  Post/Patch/Delete operations and their own validation/state processors on
+  top of this).
+- User.php serialization cleanup for the new GET /api/users output:
+  `#[Ignore]` (Symfony\Component\Serializer\Attribute\Ignore) on
+  getPassword(), getUserIdentifier(), getRoleEntities(), and the `$roles`
+  ManyToMany property/getRoles() pair. Output is now
+  {id, email, firstName, lastName, createdAt, active} - no password.
+- tests/Security/UserManagementVoterTest.php: loads AppFixtures, creates an
+  extra plain ROLE_USER user, logs in as both admin and that user, and asserts
+  GET /api/users and GET /api/roles return 403 for the non-admin and 200 for
+  admin.
+- Verified: `bin/console lint:container` OK, `php -l` clean on new/changed
+  files, `doctrine:schema:validate` still in sync (no schema changes - only
+  serializer/API metadata attributes added), `docker compose exec -e
+  APP_ENV=test php bin/phpunit` -> 10 tests, 17 assertions, OK. Manually
+  curled the running stack: GET /api/users with admin token -> 200 (no
+  password field), GET /api/roles with admin token -> 200, GET /api/users
+  without a token -> 401.
+- Files changed: backend/src/Security/Voter/UserManagementVoter.php (new),
+  backend/src/Entity/User.php, backend/src/Entity/Role.php,
+  backend/config/packages/security.yaml,
+  backend/tests/Security/UserManagementVoterTest.php (new), prd.json,
+  progress.txt.
+- **Learnings for future iterations:**
+  - For a Doctrine ManyToMany association property that is also exposed via a
+    same-named getter returning a different shape (here: `$roles` is
+    `Collection<Role>`, but `getRoles(): array<string>` is required by
+    UserInterface and returns role codes), API Platform's normalizer gets
+    confused ("Unexpected non-object element in to-many relation") unless the
+    property is marked `#[Ignore]` (Symfony\Component\Serializer\Attribute\Ignore)
+    - this suppresses the whole "roles" attribute (property + getter) from
+    serialization. US-009 will need to expose roles as an array of Role codes
+    explicitly (e.g. via a dedicated DTO/output field with its own name, or a
+    custom normalizer), not by un-ignoring this property.
+  - Pattern for admin-only API paths going forward: add a `roles: MANAGE_USERS`
+    (or a new dedicated attribute) access_control entry ABOVE the generic
+    `^/api -> IS_AUTHENTICATED_FULLY` rule - access_control is first-match-wins,
+    so ordering is critical.
+  - `#[ApiResource(operations: [...])]` with only GetCollection/Get is enough
+    to register working routes for an entity with no extra config - API
+    Platform's Doctrine ORM state provider handles these by default.
 ---

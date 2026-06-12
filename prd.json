@@ -109,7 +109,7 @@
         "Tests pass (PHPUnit test: a non-admin user gets 403 from /api/users and /api/roles; an admin user gets 200)"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
