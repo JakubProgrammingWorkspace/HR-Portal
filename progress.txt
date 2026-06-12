@@ -47,3 +47,51 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
     `docker run --rm -v "$(pwd)/frontend:/app" alpine rm -rf /app/node_modules`
     rather than a plain `rm -rf` (permission denied on host).
 ---
+
+## 2026-06-12 16:11 - US-002
+- Scaffolded a Symfony 6.4 project into backend/ via `composer create-project
+  symfony/skeleton:6.4.*`, then required api-platform/core (v4.3),
+  nelmio/cors-bundle (v2.6), symfony/orm-pack (doctrine/doctrine-bundle,
+  doctrine/orm, doctrine/doctrine-migrations-bundle), and symfony/maker-bundle
+  (dev).
+- Configured config/packages/api_platform.yaml with title "HR-Portal API" and
+  `formats: { json: [application/json], jsonld: [application/ld+json] }` so
+  JSON is supported as a resource format alongside JSON-LD; /api/docs still
+  works for documentation (defaults to JSON-LD/OpenAPI docs formats).
+- nelmio_cors recipe already wires CORS_ALLOW_ORIGIN (from .env /
+  docker-compose) to all paths (`paths: { '^/': null }` inherits `defaults`);
+  verified preflight OPTIONS on /api/health returns the right
+  Access-Control-* headers for Origin http://localhost:5173.
+- Added src/Controller/HealthController.php: GET /api/health returns
+  `{"status":"ok"}` with 200.
+- Updated backend/.env DATABASE_URL to
+  postgresql://hr_portal:hr_portal@postgres:5432/hr_portal?serverVersion=16&charset=utf8
+  (docker-compose's php service env var of the same name still takes
+  precedence at runtime, but this keeps the committed default consistent).
+- Removed the auto-generated backend/compose.yaml, backend/compose.override.yaml,
+  and empty backend/.env.dev — these duplicated the postgres service already
+  defined in the root docker-compose.yml and would conflict with it.
+- Files changed: backend/{composer.json,composer.lock,symfony.lock,.env,
+  .gitignore,bin/**,config/**,migrations/.gitignore,src/Controller/HealthController.php,
+  src/Kernel.php,src/ApiResource/.gitignore,src/Entity/.gitignore,
+  src/Repository/.gitignore,public/index.php}, prd.json, progress.txt.
+- Verified: `docker compose exec php composer install` completes cleanly,
+  `bin/console lint:container` OK, `bin/console doctrine:database:create
+  --if-not-exists` succeeds (db already created by postgres container's
+  POSTGRES_DB), `docker compose config` validates, and against the running
+  stack: GET /api/health -> 200 `{"status":"ok"}`, GET /api/docs -> 200.
+- **Learnings for future iterations:**
+  - `composer create-project`/`composer require` run inside the php container
+    create files owned by root on the host bind mount; after each composer
+    command run `docker compose exec -u root php chown -R 1000:1000
+    /var/www/html` so the host user can edit the files with Edit/Write tools.
+  - Symfony Flex recipes for doctrine/doctrine-bundle add their own
+    backend/compose.yaml + compose.override.yaml (a postgres "database"
+    service) — delete these, the root docker-compose.yml already provides
+    postgres as the `postgres` service and DATABASE_URL points at it.
+  - docker-compose.yml's php service environment vars (DATABASE_URL,
+    CORS_ALLOW_ORIGIN, etc.) override backend/.env at runtime, but keep
+    backend/.env's defaults consistent anyway for clarity / non-docker usage.
+  - API Platform v4 mounts resources under /api (config/routes/api_platform.yaml
+    sets prefix: /api). /api/docs and /api both return 200 by default.
+---

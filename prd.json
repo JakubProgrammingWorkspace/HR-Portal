@@ -32,7 +32,7 @@
         "`composer install` completes without errors inside the php container"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

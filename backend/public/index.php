@@ -1,8 +1,9 @@
 <?php
 
-// Placeholder front controller until the Symfony 6 + API Platform skeleton
-// is scaffolded in US-002. Keeps nginx/php-fpm serving a 200 response so
-// the Docker Compose stack can be verified end-to-end.
+use App\Kernel;
 
-header('Content-Type: application/json');
-echo json_encode(['status' => 'ok', 'message' => 'HR-Portal backend skeleton pending (US-002)']);
+require_once dirname(__DIR__).'/vendor/autoload_runtime.php';
+
+return static function (array $context) {
+    return new Kernel($context['APP_ENV'], (bool) $context['APP_DEBUG']);
+};
