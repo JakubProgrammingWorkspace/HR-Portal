@@ -1423,3 +1423,58 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
     download (attach the auth token as a header, e.g. via `fetch` + blob +
     object URL, since `<a href>` can't send `Authorization`).
 ---
+
+## 2026-06-13 - US-025
+- Rewrote frontend/src/pages/ReferralsPage.tsx: removed the US-022 mock
+  `referrals`/`Referral` table state and the "Szukaj skierowania" filter (no
+  longer meaningful against real API data); the page now fetches `GET
+  /api/referrals?page={page}` (plain JSON array, default API Platform
+  itemsPerPage=30) on mount and whenever `page` changes.
+- Table columns: Pracownik (resolved via a `Map<string,string>` of
+  `/api/employees/{id}` -> "First Last", same IRI-map pattern as
+  EmployeesPage), Typ badania (via existing `examinationTypeLabel`),
+  Stanowisko (`jobPosition`), Data wystawienia (`issueDate.slice(0,10)`),
+  Status PDF ("Wygenerowano"/"Nie wygenerowano" badge based on whether
+  `pdfGeneratedAt` is present), and Akcje.
+- Akcje column: if `pdfGeneratedAt` is unset, a "Generuj PDF" button POSTs
+  `/api/referrals/{id}/generate-pdf` (per-row `generatingId` state shows a
+  spinner) and replaces that row with the returned (updated) Referral on
+  success - status flips to "Wygenerowano" and the button becomes "Pobierz
+  PDF". "Pobierz PDF" calls `apiFetch` GET `/api/referrals/{id}/pdf`
+  (attaches the auth Bearer token), reads the response as a `Blob`, and
+  triggers a download via a temporary `<a download="skierowanie-{id}.pdf">` +
+  `URL.createObjectURL`/`revokeObjectURL`. A page-level `pdfError` banner
+  shows the API's Polish `detail` on a non-2xx response from either action.
+- Pagination: "Poprzednia"/"Następna" buttons + "Strona {page}" label below
+  the table; "Następna" is enabled only when the current page returned
+  exactly `ITEMS_PER_PAGE` (30) items (heuristic for "more pages exist" since
+  the plain-JSON response carries no Hydra `totalItems`/`view`).
+- `NewReferralForm` (US-022) is unchanged structurally; its `onCreated`
+  callback signature simplified to `(created: ReferralListItem) => void` -
+  on page 1 the created referral is prepended to the list (trimmed to 30
+  items), otherwise `setPage(1)` triggers a refetch of page 1.
+- Files changed: frontend/src/pages/ReferralsPage.tsx, prd.json, progress.txt.
+- Verified: `docker compose exec node npm run typecheck` passes (tsc
+  --noEmit, no errors). No backend changes - existing 38 PHPUnit tests
+  unaffected. Used playwright-cli as admin@hr-portal.local: /referrals shows
+  the form + an empty table ("Brak skierowań.") with disabled
+  Poprzednia/Następna and "Strona 1"; filled the form for Jan Kowalski
+  (Okresowe / Tester / Warszawa / "Test", today's date), checked "Hałas"
+  (category I, "85 dB") and "Pyły zawierające azbest" (category II, "0,1
+  mg/m3"), submitted -> new row "Jan Kowalski | Okresowe | Tester |
+  2026-06-13 | Nie wygenerowano | [Generuj PDF]"; clicked "Generuj PDF" ->
+  row updated in place to "Wygenerowano" / "Pobierz PDF"; clicked "Pobierz
+  PDF" -> downloaded `skierowanie-6.pdf` (33007 bytes). No console errors
+  (only the pre-existing harmless React Router v7 flag warnings).
+- **Learnings for future iterations:**
+  - GET /api/referrals?page=N works with the plain-JSON (non-Hydra) format
+    and returns up to `itemsPerPage` (30) items for that page, same as the
+    unpaginated endpoints from earlier stories - no `Accept:
+    application/ld+json` needed to get pagination to work, just the `page`
+    query param. There's no `totalItems` in this format though, so "has next
+    page" has to be inferred from `results.length === itemsPerPage`.
+  - Downloading an authenticated binary file (PDF) from the frontend must go
+    through `apiFetch` + `response.blob()` + `URL.createObjectURL()` + a
+    temporary `<a download>` click, NOT a plain `<a href="...">` - `<a href>`
+    can't attach the `Authorization` header API Platform requires.
+---

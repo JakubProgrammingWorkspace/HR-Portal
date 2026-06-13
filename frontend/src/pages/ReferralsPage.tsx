@@ -1,22 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { apiFetch } from '../api/client';
-import { Search, CheckCircle2, Clock, AlertTriangle, ChevronDown, Send } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Download, FileText, Loader2, Send } from 'lucide-react';
 
-interface Referral {
-  id: string;
-  employeeName: string;
-  type: string;
-  date: string;
-  status: 'active' | 'completed' | 'overdue';
-}
-
-const mockReferrals: Referral[] = [
-  { id: 'SK/2026/001', employeeName: 'Jan Kowalski', type: 'Badania Okresowe', date: '2026-06-10', status: 'active' },
-  { id: 'SK/2026/002', employeeName: 'Anna Nowak', type: 'Badania Wstępne', date: '2026-06-12', status: 'active' },
-  { id: 'SK/2026/003', employeeName: 'Piotr Wiśniewski', type: 'Badania Kontrolne', date: '2026-05-20', status: 'completed' },
-  { id: 'SK/2026/004', employeeName: 'Maria Wójcik', type: 'Badania Okresowe', date: '2026-04-15', status: 'overdue' },
-];
+const ITEMS_PER_PAGE = 30;
 
 interface EmployeeOption {
   id: number;
@@ -38,7 +25,7 @@ interface CategoryRow {
   factors: FactorRow[];
 }
 
-interface ReferralResponse {
+interface ReferralListItem {
   id: number;
   employee: string;
   examinationType: string;
@@ -46,6 +33,8 @@ interface ReferralResponse {
   jobDescription: string;
   issuePlace: string;
   issueDate: string;
+  pdfPath?: string;
+  pdfGeneratedAt?: string;
 }
 
 const EXAMINATION_TYPES: { value: string; label: string }[] = [
@@ -105,44 +94,88 @@ function today(): string {
 }
 
 export default function ReferralsPage() {
-  const [referrals, setReferrals] = useState<Referral[]>(mockReferrals);
+  const [referrals, setReferrals] = useState<ReferralListItem[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [categories, setCategories] = useState<CategoryRow[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [generatingId, setGeneratingId] = useState<number | null>(null);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   useEffect(() => {
-    void loadData();
+    void Promise.all([
+      apiFetch('/api/employees').then(async (response) => {
+        if (response.ok) {
+          setEmployees((await response.json()) as EmployeeOption[]);
+        }
+      }),
+      apiFetch('/api/exposure-categories').then(async (response) => {
+        if (response.ok) {
+          setCategories((await response.json()) as CategoryRow[]);
+        }
+      }),
+    ]);
   }, []);
 
-  async function loadData() {
-    const [employeesResponse, categoriesResponse] = await Promise.all([
-      apiFetch('/api/employees'),
-      apiFetch('/api/exposure-categories'),
-    ]);
+  useEffect(() => {
+    void loadReferrals(page);
+  }, [page]);
 
-    if (employeesResponse.ok) {
-      setEmployees((await employeesResponse.json()) as EmployeeOption[]);
-    }
-    if (categoriesResponse.ok) {
-      setCategories((await categoriesResponse.json()) as CategoryRow[]);
+  async function loadReferrals(targetPage: number) {
+    const response = await apiFetch(`/api/referrals?page=${targetPage}`);
+    if (response.ok) {
+      const data = (await response.json()) as ReferralListItem[];
+      setReferrals(data);
+      setHasNextPage(data.length === ITEMS_PER_PAGE);
     }
   }
 
-  function handleCreated(created: ReferralResponse, employee: EmployeeOption | undefined) {
-    const newRow: Referral = {
-      id: String(created.id),
-      employeeName: employee ? `${employee.firstName} ${employee.lastName}` : '—',
-      type: `Badania ${examinationTypeLabel(created.examinationType)}`,
-      date: created.issueDate.slice(0, 10),
-      status: 'active',
-    };
-    setReferrals((prev) => [newRow, ...prev]);
-  }
-
-  const filtered = referrals.filter((ref) =>
-    ref.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ref.id.toLowerCase().includes(searchTerm.toLowerCase())
+  const employeeNames = useMemo(
+    () => new Map(employees.map((employee) => [`/api/employees/${employee.id}`, `${employee.firstName} ${employee.lastName}`])),
+    [employees]
   );
+
+  function handleCreated(created: ReferralListItem) {
+    if (page === 1) {
+      setReferrals((prev) => [created, ...prev].slice(0, ITEMS_PER_PAGE));
+    } else {
+      setPage(1);
+    }
+  }
+
+  async function handleGeneratePdf(id: number) {
+    setPdfError(null);
+    setGeneratingId(id);
+    try {
+      const response = await apiFetch(`/api/referrals/${id}/generate-pdf`, { method: 'POST' });
+      if (!response.ok) {
+        setPdfError(await extractErrorMessage(response));
+        return;
+      }
+      const updated = (await response.json()) as ReferralListItem;
+      setReferrals((prev) => prev.map((referral) => (referral.id === id ? updated : referral)));
+    } finally {
+      setGeneratingId(null);
+    }
+  }
+
+  async function handleDownloadPdf(id: number) {
+    setPdfError(null);
+    const response = await apiFetch(`/api/referrals/${id}/pdf`);
+    if (!response.ok) {
+      setPdfError(await extractErrorMessage(response));
+      return;
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `skierowanie-${id}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -153,72 +186,97 @@ export default function ReferralsPage() {
 
       <NewReferralForm employees={employees} categories={categories} onCreated={handleCreated} />
 
-      {/* Filter panel */}
-      <div className="flex gap-4 max-w-md">
-        <div className="relative flex-1">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-4 w-4 text-slate-400" />
-          </div>
-          <input
-            type="text"
-            placeholder="Szukaj skierowania..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
-          />
-        </div>
-      </div>
+      {pdfError && <p className="text-sm font-medium text-brand-rust">{pdfError}</p>}
 
       {/* Table grid */}
       <div className="overflow-hidden border border-slate-100 dark:border-slate-800/80 rounded-2xl bg-white dark:bg-slate-900 shadow-sm">
         <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800">
           <thead className="bg-slate-50/50 dark:bg-slate-800/20">
             <tr>
-              <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Kod skierowania</th>
               <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Pracownik</th>
               <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Typ badania</th>
+              <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Stanowisko</th>
               <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Data wystawienia</th>
-              <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Status</th>
+              <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Status PDF</th>
+              <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Akcje</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-            {filtered.map((ref) => (
-              <tr key={ref.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
-                <td className="px-6 py-4 text-sm font-mono text-slate-600 dark:text-slate-300 font-medium">{ref.id}</td>
-                <td className="px-6 py-4 text-sm font-semibold text-slate-800 dark:text-white">{ref.employeeName}</td>
-                <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{ref.type}</td>
-                <td className="px-6 py-4 text-sm font-mono text-slate-500 dark:text-slate-400">{ref.date}</td>
+            {referrals.map((referral) => (
+              <tr key={referral.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                <td className="px-6 py-4 text-sm font-semibold text-slate-800 dark:text-white">
+                  {employeeNames.get(referral.employee) ?? referral.employee}
+                </td>
+                <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{examinationTypeLabel(referral.examinationType)}</td>
+                <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{referral.jobPosition}</td>
+                <td className="px-6 py-4 text-sm font-mono text-slate-500 dark:text-slate-400">{referral.issueDate.slice(0, 10)}</td>
                 <td className="px-6 py-4 text-sm">
-                  {ref.status === 'active' && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-950/20 px-2.5 py-1 text-xs font-semibold text-blue-700 dark:text-blue-400">
-                      <Clock className="w-3.5 h-3.5" />
-                      W toku
-                    </span>
-                  )}
-                  {ref.status === 'completed' && (
+                  {referral.pdfGeneratedAt ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/20 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      Ukończone
+                      Wygenerowano
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:text-slate-400">
+                      <Clock className="w-3.5 h-3.5" />
+                      Nie wygenerowano
                     </span>
                   )}
-                  {ref.status === 'overdue' && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 dark:bg-rose-950/20 px-2.5 py-1 text-xs font-semibold text-rose-700 dark:text-rose-400">
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      Przeterminowane
-                    </span>
+                </td>
+                <td className="px-6 py-4 text-sm">
+                  {referral.pdfGeneratedAt ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleDownloadPdf(referral.id)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Pobierz PDF
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void handleGeneratePdf(referral.id)}
+                      disabled={generatingId === referral.id}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-brand-moss hover:bg-brand-moss-light text-white px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+                    >
+                      {generatingId === referral.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
+                      Generuj PDF
+                    </button>
                   )}
                 </td>
               </tr>
             ))}
-            {filtered.length === 0 && (
+            {referrals.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-sm text-slate-400">
-                  Brak aktywnego skierowania.
+                <td colSpan={6} className="px-6 py-8 text-center text-sm text-slate-400">
+                  Brak skierowań.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+        <div className="flex items-center justify-end gap-2 px-6 py-3 border-t border-slate-100 dark:border-slate-800">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-50"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+            Poprzednia
+          </button>
+          <span className="text-xs text-slate-500 dark:text-slate-400">Strona {page}</span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => p + 1)}
+            disabled={!hasNextPage}
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 disabled:opacity-50"
+          >
+            Następna
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -227,7 +285,7 @@ export default function ReferralsPage() {
 interface NewReferralFormProps {
   employees: EmployeeOption[];
   categories: CategoryRow[];
-  onCreated: (created: ReferralResponse, employee: EmployeeOption | undefined) => void;
+  onCreated: (created: ReferralListItem) => void;
 }
 
 function NewReferralForm({ employees, categories, onCreated }: NewReferralFormProps) {
@@ -311,9 +369,8 @@ function NewReferralForm({ employees, categories, onCreated }: NewReferralFormPr
         return;
       }
 
-      const created = (await response.json()) as ReferralResponse;
-      const employee = employees.find((e) => String(e.id) === employeeId);
-      onCreated(created, employee);
+      const created = (await response.json()) as ReferralListItem;
+      onCreated(created);
 
       setEmployeeId('');
       setExaminationType('');

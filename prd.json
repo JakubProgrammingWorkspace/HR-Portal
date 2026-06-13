@@ -393,7 +393,7 @@
         "Verify in browser using the playwright-cli skill: from a referral created via the form, click \"Generuj PDF\", then download the resulting PDF and confirm a file is retrieved"
       ],
       "priority": 25,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
