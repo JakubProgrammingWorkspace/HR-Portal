@@ -349,7 +349,7 @@
         "Verify in browser using the playwright-cli skill: fill the form for a seeded employee, select factors from at least 2 categories, submit, and confirm a success response"
       ],
       "priority": 22,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

@@ -1130,6 +1130,67 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
     confirmation prompt.
 ---
 
+## 2026-06-13 - US-022
+- Rewrote frontend/src/pages/ReferralsPage.tsx: a `NewReferralForm` component
+  renders always-visible above the existing placeholder table (kept the mock
+  `referrals` table per the AC's "placeholder list is acceptable if US-025 is
+  not yet built", now seeded into `useState` so created referrals can be
+  prepended).
+- On mount, fetches `/api/employees` (for the Pracownik `<select>`, options
+  `{firstName} {lastName}`) and `/api/exposure-categories` (already returns
+  the 5 categories in sortOrder with nested `factors`, per US-018/US-019 -
+  reused the same `CategoryRow`/`FactorRow` shapes) in parallel.
+- Form fields: Pracownik (select), Typ badania (select from a local
+  `EXAMINATION_TYPES` = wstepne/okresowe/kontrolne -> Wstępne/Okresowe/
+  Kontrolne), Stanowisko pracy, Miejsce wystawienia, Opis warunków pracy /
+  zakres czynności (textarea), Data wystawienia (date input, defaults to
+  `today()` = `new Date().toISOString().slice(0,10)`).
+- Each category renders as a card with a checkbox per factor; checking one
+  adds it to a `Map<factorId, exposureDetails>` state and reveals a text input
+  for "Wielkość narażenia / wyniki pomiarów" (stored as that factor's
+  `exposureDetails`, defaults to `''` if left blank).
+- Client-side required-field validation (Polish messages) only for employee,
+  examinationType, jobPosition per the AC; submit POSTs
+  `{ employee: "/api/employees/{id}", examinationType, jobPosition,
+  jobDescription, issuePlace, issueDate, exposureFactors: [{factor:
+  "/api/exposure-factors/{id}", exposureDetails}, ...] }` to /api/referrals.
+  422 responses map `violations[].propertyPath` onto the same field-error
+  slots (same `extractFieldErrors`/`extractErrorMessage` helpers duplicated
+  from EmployeesPage/CompaniesPage); on success the form resets (incl.
+  clearing the factor `Map`) and the response is mapped into a placeholder
+  table row (`{id, employeeName, type: "Badania " + label, date:
+  issueDate.slice(0,10), status: 'active'}`) prepended to the list.
+- Files changed: frontend/src/pages/ReferralsPage.tsx, prd.json, progress.txt.
+- Verified: `docker compose exec node npm run typecheck` passes (tsc
+  --noEmit). `docker compose exec -e APP_ENV=test php bin/phpunit` -> 34
+  tests, 104 assertions, OK (unchanged - no backend changes this story). Used
+  playwright-cli as admin@hr-portal.local: /referrals renders the form with
+  the seeded employee "Jan Kowalski" and all 5 exposure categories with their
+  factors; filled Pracownik/Typ badania=Okresowe/Stanowisko=Spawacz/Opis/
+  Miejsce=Warszawa, checked one factor each from category I (Hałas, "85 dB")
+  and category II (Pyły zawierające azbest, "0,1 mg/m3"), submitted -> 201,
+  form reset (selects back to placeholder, checkboxes unchecked), and a new
+  row "2 Jan Kowalski Badania Okresowe 2026-06-13T00:00:00+00:00 W toku"
+  appeared at the top of the table. Caught that the raw `issueDate` from the
+  API is a full ISO datetime string, not just a date - added `.slice(0,10)`
+  and re-verified a second submission (Typ badania=Wstępne, no factors) shows
+  "2026-06-13" correctly and a 422 for missing issuePlace/jobDescription
+  correctly populated those fields' error messages via `extractFieldErrors`.
+  Cleaned up both test referrals via `DELETE /api/referrals/{id}` afterwards.
+- **Learnings for future iterations:**
+  - GET/POST /api/referrals' `issueDate` serializes as a full ISO datetime
+    (e.g. `"2026-06-13T00:00:00+00:00"`, from the `date_immutable` Doctrine
+    type) - any frontend code displaying it as a plain date must
+    `.slice(0, 10)` (or otherwise reformat), not use the raw string directly.
+  - US-025 (referral list with PDF download) will replace this page's
+    placeholder `referrals` table entirely with a real `GET /api/referrals`
+    fetch (paginated) - the `NewReferralForm` component and its `onCreated`
+    callback signature (`(created: ReferralResponse, employee:
+    EmployeeOption | undefined) => void`) can stay as-is, just change what
+    `onCreated` does with the result (e.g. refetch the list or prepend the
+    real API response instead of a mapped placeholder row).
+---
+
 ## 2026-06-13 - US-021
 - Added #[ApiResource] to App\Entity\Referral: GetCollection, Get, Post
   (input: ReferralInput::class, processor: ReferralCreateProcessor::class),
