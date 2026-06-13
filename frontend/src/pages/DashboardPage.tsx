@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
-import { 
-  Users, 
-  Building2, 
-  FileText, 
-  ShieldAlert, 
-  Terminal as TerminalIcon, 
-  ArrowUpRight 
+import {
+  Users,
+  Building2,
+  FileText,
+  ShieldAlert,
+  Terminal as TerminalIcon,
 } from 'lucide-react';
 import { apiFetch } from '../api/client';
 
@@ -22,26 +21,25 @@ export default function DashboardPage() {
   const [logs, setLogs] = useState<string[]>([]);
 
   useEffect(() => {
+    async function fetchTotalItems(path: string): Promise<number> {
+      const response = await apiFetch(path, { headers: { Accept: 'application/ld+json' } });
+      if (!response.ok) {
+        return 0;
+      }
+      const data = (await response.json()) as { totalItems?: number };
+      return data.totalItems ?? 0;
+    }
+
     async function fetchStats() {
       try {
-        const [emp, comp, exp, ref] = await Promise.all([
-          apiFetch('/api/employees'),
-          apiFetch('/api/companies'),
-          apiFetch('/api/exposure-factors'),
-          apiFetch('/api/referrals').catch(() => null), // If route fails/is placeholder
+        const [employees, companies, exposureFactors, referrals] = await Promise.all([
+          fetchTotalItems('/api/employees'),
+          fetchTotalItems('/api/companies'),
+          fetchTotalItems('/api/exposure-factors'),
+          fetchTotalItems('/api/referrals'),
         ]);
-        
-        const empData = emp.ok ? await emp.json() : [];
-        const compData = comp.ok ? await comp.json() : [];
-        const expData = exp.ok ? await exp.json() : [];
-        const refData = ref && ref.ok ? await ref.json() : [];
 
-        setStats({
-          employees: Array.isArray(empData) ? empData.length : 0,
-          companies: Array.isArray(compData) ? compData.length : 0,
-          exposureFactors: Array.isArray(expData) ? expData.length : 0,
-          referrals: Array.isArray(refData) ? refData.length : 0,
-        });
+        setStats({ employees, companies, exposureFactors, referrals });
       } catch (err) {
         console.error(err);
       } finally {

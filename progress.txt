@@ -168,6 +168,11 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
   getter (e.g. `getExposureFactorDetails(): array` returning
   `[{factor: id, factorName, exposureDetails}, ...]`) - same
   collection-to-plain-array pattern as ExposureCategory::getFactors().
+- To get an accurate total count for an API Platform collection without a
+  new endpoint, request it with `Accept: application/ld+json` - the response
+  becomes `{"@type": "Collection", "totalItems": N, "member": [...]}` instead
+  of a plain array; `totalItems` reflects the full collection count
+  regardless of pagination/itemsPerPage.
 
 ## 2026-06-12 - US-001
 - Implemented the Docker Compose stack: postgres (16-alpine, with healthcheck),
@@ -1520,3 +1525,32 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
     if the modal/DTO actually supports an empty array) rather than leaving
     the listbox untouched.
 ---
+
+## 2026-06-13 - US-027
+- DashboardPage.tsx already existed (added in an earlier "changes in layout"
+  commit, ahead of this PRD's stories) with a 4-card stats grid (Pracownicy,
+  Firmy, Czynniki szkodliwe, Skierowania) but it computed counts as
+  `array.length` of each collection's plain-JSON response (capped at the
+  default itemsPerPage=30, so wrong once any collection exceeds 30 items).
+- Replaced the fetch logic with a `fetchTotalItems(path)` helper that calls
+  `apiFetch(path, { headers: { Accept: 'application/ld+json' } })` and reads
+  `data.totalItems` from the JSON-LD Collection response
+  (`{"@context":...,"@type":"Collection","totalItems":N,"member":[...]}`) -
+  used for all 4 cards (employees, companies, exposureFactors, referrals).
+  Also removed the unused `ArrowUpRight` lucide-react import.
+- Files changed: frontend/src/pages/DashboardPage.tsx, prd.json, progress.txt.
+- Verified: `docker compose exec node npm run typecheck` passes. `docker
+  compose exec -e APP_ENV=test php bin/phpunit` -> 38 tests, 123 assertions,
+  OK (no backend changes). Used playwright-cli as admin@hr-portal.local:
+  logged in, /dashboard shows Wszyscy pracownicy=1, Zarejestrowane firmy=1,
+  Czynniki szkodliwe=47, Skierowania=1 - all non-zero, matching seed data. No
+  new console errors (only pre-existing favicon 404 and React Router v7
+  warnings).
+- **Learnings for future iterations:**
+  - To get an accurate total count for an API Platform collection without a
+    new endpoint, request it with `Accept: application/ld+json` - the
+    response body becomes `{"@context", "@id", "@type": "Collection",
+    "totalItems": N, "member": [...]}` instead of a plain JSON array, and
+    `totalItems` reflects the full collection count regardless of
+    pagination/itemsPerPage. The default `Accept: application/json` (used
+    elsewhere in this app for plain arrays) does NOT include this field.

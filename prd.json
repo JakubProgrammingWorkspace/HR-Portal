@@ -424,7 +424,7 @@
         "Verify in browser using the playwright-cli skill: dashboard loads after login and shows non-zero counts after seed data is loaded"
       ],
       "priority": 27,
-      "passes": false,
+      "passes": true,
       "notes": ""
     }
   ]
