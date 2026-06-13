@@ -59,6 +59,22 @@ Set up the custom classes and fonts in `src/index.css` using Tailwind v4 syntax:
   --color-brand-cream: #FAF9F5;
 }
 
+/* Dark Mode Overrides */
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-brand-cream: #0F172A;
+    --color-brand-moss: #10B981;
+    --color-brand-moss-light: #34D399;
+  }
+  
+  .card-tactile {
+    background: #1E293B;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  body { color: #F8FAFC; }
+}
+
 body {
   background-color: var(--color-brand-cream);
   color: #1E293B;
@@ -102,6 +118,7 @@ Transform the menu into a **"Floating Island" Sidebar**:
   - Use `lucide-react` icons (install `npm install lucide-react` if not present).
   - Active states should feel fluid. Use a smooth background pill: `bg-brand-moss text-white shadow-md` or `bg-slate-100 text-brand-moss`.
   - Hover states should raise the element slightly (`translate-x-1 transition-all duration-200`).
+- **Mobile Responsive Behavior**: On mobile (`max-w-md`), the sidebar must convert into a fixed bottom navigation bar (`fixed bottom-0 left-0 right-0 h-16 flex justify-around items-center bg-white/90 backdrop-blur-xl border-t border-slate-200/50 z-50 rounded-t-3xl rounded-b-none`).
 - **Footer Section**:
   - Add a dynamic "System Operational" status pill with a pulsing green dot and monospace text at the bottom of the sidebar.
 
@@ -129,6 +146,7 @@ Data lists must look like clean dashboards:
   - Transition on hover: `hover:bg-slate-50/50 transition-colors`.
   - Numeric/identifier columns (PESEL, NIP, Phone) must render in `font-mono text-slate-600 text-xs`.
 - Actions: Replace raw text buttons (like "Usuń") with clean, modern action icon buttons (e.g., Lucide `Trash2` or `Edit` buttons styled inside minimal rounded circular rings).
+- **Loading State**: Never use raw text like "Wczytywanie...". Replace with Tailwind skeleton loaders (e.g., `<div className="animate-pulse flex space-x-4"><div className="h-10 bg-slate-200 rounded w-full"></div></div>`).
 
 ---
 
@@ -164,4 +182,5 @@ Elevate the login entrance:
 5. [ ] Build standard dashboard widgets and dynamic elements inside `pages/DashboardPage.tsx`.
 6. [ ] Redesign forms and tables inside `pages/EmployeesPage.tsx`, `pages/CompaniesPage.tsx`, `pages/UsersPage.tsx`, and `pages/ExposureFactorsPage.tsx` using the custom theme variables.
 7. [ ] Redesign `pages/LoginPage.tsx` with a modern visual split screen.
-8. [ ] Build the project to verify that there are no TS compilation or CSS rendering errors.
+8. [ ] Replace all instances of `Wczytywanie...` or `Loading...` text with animated skeleton loaders.
+9. [ ] Build the project to verify that there are no TS compilation or CSS rendering errors.

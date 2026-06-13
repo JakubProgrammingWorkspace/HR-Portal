@@ -36,6 +36,19 @@ Define these variables in your root element:
   --shadow-tactile: 0 10px 30px -15px rgba(0, 0, 0, 0.03);
   --shadow-tactile-hover: 0 20px 40px -20px rgba(0, 0, 0, 0.06);
 }
+
+/* Dark Mode Implementation */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg-app: #0F172A;          /* Deep Slate */
+    --color-bg-card: #1E293B;         /* Slate Card */
+    --color-text-primary: #F8FAFC;    
+    --color-text-secondary: #94A3B8;  
+    --color-border-subtle: rgba(255, 255, 255, 0.1);
+    --shadow-tactile: 0 10px 30px -15px rgba(0, 0, 0, 0.3);
+    --shadow-tactile-hover: 0 20px 40px -20px rgba(0, 0, 0, 0.5);
+  }
+}
 ```
 
 ---
@@ -86,6 +99,22 @@ h1, h2, h3, h4 {
 
 code, pre, .font-mono, .data-column {
   font-family: var(--font-data-mono);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-subtle);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
 }
 ```
 
@@ -212,7 +241,33 @@ Buttons must feel magnetic and reactive:
 
 ---
 
-## 6. Implementation Checklist for Agents
+## 6. Accessibility (A11y) & State Feedback
+
+A premium UI must be accessible and responsive.
+
+### Touch Targets & Focus
+- Ensure all interactive elements (buttons, links, inputs) have a minimum touch target size of `44x44px` for mobile accessibility.
+- Never remove focus rings completely without a custom replacement. The `.input-tactile:focus` class ensures keyboard users can navigate clearly.
+
+### Skeleton Loading States
+Never show plain text like "Loading..." in a premium app. Use animated skeleton placeholders:
+```css
+.skeleton {
+  background: linear-gradient(90deg, var(--color-border-subtle) 25%, rgba(226, 232, 240, 0.2) 50%, var(--color-border-subtle) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-element);
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+```
+
+---
+
+## 7. Implementation Checklist for Agents
 
 Regardless of framework (React, Symfony/Twig, Laravel, etc.), follow these steps to execute a design upgrade:
 
