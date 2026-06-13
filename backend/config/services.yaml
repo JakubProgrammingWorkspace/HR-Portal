@@ -25,6 +25,11 @@ services:
     # please note that last definitions always *replace* previous ones
 
     # public so it can be fetched directly from the container in tests
-    # (US-024 will also inject it into the generate-pdf state processor)
     App\Service\ReferralPdfGeneratorService:
         public: true
+
+    # API Platform custom-controller operations reference the controller by
+    # its FQCN as the service id - tag it as a controller so the routing
+    # loader can resolve it
+    App\Controller\ReferralPdfDownloadController:
+        tags: ['controller.service_arguments']

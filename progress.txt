@@ -1343,3 +1343,83 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
     `$kernel->getProjectDir() . '/' . $referral->getPdfPath()` and stream it with
     a `BinaryFileResponse`, returning 404 if `pdfPath` is null.
 ---
+
+## 2026-06-13 - US-024
+- Added two custom operations to App\Entity\Referral's #[ApiResource]:
+  - `Post(uriTemplate: '/referrals/{id}/generate-pdf', name: 'generate_pdf',
+    status: 200, read: true, input: false, processor:
+    ReferralGeneratePdfProcessor::class)` - `read: true` makes API Platform's
+    Doctrine ItemProvider fetch the Referral by `{id}` and pass it as `$data` to
+    the processor (404 automatically if it doesn't exist); `input: false` skips
+    body deserialization (no request body expected).
+  - `Get(uriTemplate: '/referrals/{id}/pdf', name: 'download_pdf', controller:
+    ReferralPdfDownloadController::class, read: false, output: false)` - a plain
+    custom controller, no provider/serialization involved.
+- src/State/ReferralGeneratePdfProcessor.php: thin processor, `\assert($data
+  instanceof Referral)` then delegates to the new
+  ReferralService::generatePdf($referral): Referral, which calls
+  ReferralPdfGeneratorService::generate() (now injected into ReferralService),
+  sets pdfPath/pdfGeneratedAt(new \DateTimeImmutable()), flushes, returns the
+  referral (serialized as the normal Referral resource, now including
+  pdfPath/pdfGeneratedAt).
+- src/Controller/ReferralPdfDownloadController.php: `__invoke(int $id):
+  BinaryFileResponse` - fetches the Referral via ReferralRepository, 404
+  ("Plik PDF nie został wygenerowany dla tego skierowania.") if `pdfPath` is
+  null or the file doesn't exist on disk, otherwise returns `new
+  BinaryFileResponse($absolutePath)` (kernel.project_dir + pdfPath).
+- config/services.yaml: added `App\Controller\ReferralPdfDownloadController:
+  tags: ['controller.service_arguments']` - required for API Platform's routing
+  loader to resolve a custom `controller:` class as a service (otherwise
+  `debug:router`/requests fail with "defining an unknown service as
+  controller").
+- Installed `symfony/mime` (^6.4, no recipe/symfony.lock entry) -
+  `BinaryFileResponse` needs it to guess the `Content-Type` header
+  (`application/pdf`), otherwise throws a 500 LogicException at request time.
+- tests/Api/ReferralCrudTest.php: added a `createReferral(Employee)` helper
+  (persists a minimal Referral with no exposure factors) and 3 new tests -
+  generate-pdf sets pdfPath/pdfGeneratedAt (response + re-fetched entity + file
+  exists on disk, then unlinked), download before generation -> 404, and
+  download after generate-pdf -> 200 with `Content-Type: application/pdf` and a
+  non-zero `Content-Length` (BinaryFileResponse::getContent() returns false, so
+  asserting on `getContent()` doesn't work - check the `Content-Length` header
+  instead).
+- Files changed: backend/{composer.json,composer.lock,config/services.yaml,
+  src/Entity/Referral.php,src/Service/ReferralService.php,
+  src/State/ReferralGeneratePdfProcessor.php (new),
+  src/Controller/ReferralPdfDownloadController.php (new),
+  tests/Api/ReferralCrudTest.php,CLAUDE.md}, prd.json, progress.txt.
+- Verified: `bin/console lint:container` OK, `php -l` clean on all new/changed
+  PHP files, `doctrine:schema:validate` in sync (no entity/column changes),
+  `docker compose exec -e APP_ENV=test php bin/phpunit` -> 38 tests, 123
+  assertions, OK (3 new tests). `bin/console debug:router` shows both new
+  routes (`generate_pdf` POST `/api/referrals/{id}/generate-pdf`, `download_pdf`
+  GET `/api/referrals/{id}/pdf`). Manually curled the running stack: created a
+  referral, POST generate-pdf -> 200 with `pdfPath: "var/referrals/{id}.pdf"`
+  and a `pdfGeneratedAt` timestamp; POSTed generate-pdf again -> `pdfPath`
+  unchanged, `pdfGeneratedAt` updated (regeneration overwrites); GET
+  /api/referrals/{id}/pdf -> 200, `Content-Type: application/pdf`, 32KB file;
+  GET without a token -> 401; DELETE the referral -> 204. Cleaned up the
+  generated PDF file and test referral afterwards.
+- **Learnings for future iterations:**
+  - See the three new Codebase Patterns... actually see backend/CLAUDE.md
+    instead - this story's reusable notes (custom-operation `read`/`input`
+    flags, the `controller.service_arguments` tag requirement, the
+    `symfony/mime` dependency for BinaryFileResponse, and the
+    `var/referrals` www-data-writable permission gotcha) were added there
+    rather than here since they're all specific to the Referral
+    PDF feature already documented in backend/CLAUDE.md.
+  - The live stack's php-fpm runs as `www-data`, while `docker compose exec
+    php ...` (used for composer/console/phpunit commands) runs as `root`.
+    `var/referrals/` was previously chowned to the host uid (1000) by an
+    earlier `chown -R 1000:1000 /var/www/html` after a composer command,
+    which made it unwritable by `www-data` (mode 0775, www-data is "other") -
+    the live generate-pdf endpoint returned 500 until `chmod 777
+    var/referrals` was run. If a future story runs `chown -R 1000:1000
+    /var/www/html` again, re-check `var/referrals` is still group/other
+    writable (or re-run `chmod 777 var/referrals`).
+  - US-025 (frontend) can now call `POST /api/referrals/{id}/generate-pdf`
+    (response includes `pdfPath`/`pdfGeneratedAt` to drive the "Wygenerowano"
+    status) and `GET /api/referrals/{id}/pdf` for the "Pobierz PDF" link/
+    download (attach the auth token as a header, e.g. via `fetch` + blob +
+    object URL, since `<a href>` can't send `Authorization`).
+---

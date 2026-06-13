@@ -221,4 +221,98 @@ class ReferralCrudTest extends WebTestCase
         $this->entityManager->clear();
         $this->assertNull($this->entityManager->getRepository(Referral::class)->find($referralId));
     }
+
+    private function createReferral(Employee $employee): Referral
+    {
+        $admin = $this->entityManager->getRepository(User::class)->findOneBy(['email' => 'admin@hr-portal.local']);
+
+        $referral = new Referral();
+        $referral->setEmployee($employee);
+        $referral->setExaminationType(ExaminationType::Wstepne);
+        $referral->setJobPosition('Operator maszyn');
+        $referral->setJobDescription('Obsługa maszyn produkcyjnych.');
+        $referral->setIssuePlace('Warszawa');
+        $referral->setIssueDate(new \DateTimeImmutable('2026-06-13'));
+        $referral->setCreatedBy($admin);
+
+        $this->entityManager->persist($referral);
+        $this->entityManager->flush();
+
+        return $referral;
+    }
+
+    public function testGeneratingPdfSetsPdfPathAndGeneratedAt(): void
+    {
+        $employee = $this->createEmployee();
+        $referral = $this->createReferral($employee);
+        $referralId = $referral->getId();
+
+        $this->client->request(
+            'POST',
+            '/api/referrals/'.$referralId.'/generate-pdf',
+            server: ['HTTP_AUTHORIZATION' => 'Bearer '.$this->token],
+        );
+
+        $response = $this->client->getResponse();
+        $this->assertSame(Response::HTTP_OK, $response->getStatusCode());
+
+        $data = json_decode((string) $response->getContent(), true);
+        $this->assertSame('var/referrals/'.$referralId.'.pdf', $data['pdfPath']);
+        $this->assertNotNull($data['pdfGeneratedAt']);
+
+        $this->entityManager->clear();
+        $stored = $this->entityManager->getRepository(Referral::class)->find($referralId);
+        $this->assertNotNull($stored);
+        $this->assertSame('var/referrals/'.$referralId.'.pdf', $stored->getPdfPath());
+        $this->assertNotNull($stored->getPdfGeneratedAt());
+
+        $absolutePath = self::$kernel->getProjectDir().'/'.$stored->getPdfPath();
+        $this->assertFileExists($absolutePath);
+
+        unlink($absolutePath);
+    }
+
+    public function testDownloadingPdfReturns404BeforeGeneration(): void
+    {
+        $employee = $this->createEmployee();
+        $referral = $this->createReferral($employee);
+
+        $this->client->request(
+            'GET',
+            '/api/referrals/'.$referral->getId().'/pdf',
+            server: ['HTTP_AUTHORIZATION' => 'Bearer '.$this->token],
+        );
+
+        $this->assertSame(Response::HTTP_NOT_FOUND, $this->client->getResponse()->getStatusCode());
+    }
+
+    public function testDownloadingGeneratedPdfReturnsFile(): void
+    {
+        $employee = $this->createEmployee();
+        $referral = $this->createReferral($employee);
+        $referralId = $referral->getId();
+
+        $this->client->request(
+            'POST',
+            '/api/referrals/'.$referralId.'/generate-pdf',
+            server: ['HTTP_AUTHORIZATION' => 'Bearer '.$this->token],
+        );
+        $this->assertSame(Response::HTTP_OK, $this->client->getResponse()->getStatusCode());
+
+        $this->client->request(
+            'GET',
+            '/api/referrals/'.$referralId.'/pdf',
+            server: ['HTTP_AUTHORIZATION' => 'Bearer '.$this->token],
+        );
+
+        $response = $this->client->getResponse();
+        $this->assertSame(Response::HTTP_OK, $response->getStatusCode());
+        $this->assertSame('application/pdf', $response->headers->get('Content-Type'));
+        $this->assertGreaterThan(0, (int) $response->headers->get('Content-Length'));
+
+        $this->entityManager->clear();
+        $stored = $this->entityManager->getRepository(Referral::class)->find($referralId);
+        $this->assertNotNull($stored);
+        unlink(self::$kernel->getProjectDir().'/'.$stored->getPdfPath());
+    }
 }

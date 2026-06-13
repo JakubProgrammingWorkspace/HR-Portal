@@ -20,6 +20,7 @@ class ReferralService
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly IriConverterInterface $iriConverter,
+        private readonly ReferralPdfGeneratorService $pdfGenerator,
     ) {
     }
 
@@ -54,6 +55,18 @@ class ReferralService
     {
         $this->entityManager->remove($referral);
         $this->entityManager->flush();
+    }
+
+    public function generatePdf(Referral $referral): Referral
+    {
+        $relativePath = $this->pdfGenerator->generate($referral);
+
+        $referral->setPdfPath($relativePath);
+        $referral->setPdfGeneratedAt(new \DateTimeImmutable());
+
+        $this->entityManager->flush();
+
+        return $referral;
     }
 
     private function resolveFactor(mixed $iri): ExposureFactor

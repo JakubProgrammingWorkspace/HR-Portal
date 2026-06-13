@@ -7,11 +7,13 @@ use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Post;
+use App\Controller\ReferralPdfDownloadController;
 use App\Dto\ReferralInput;
 use App\Enum\ExaminationType;
 use App\Repository\ReferralRepository;
 use App\State\ReferralCreateProcessor;
 use App\State\ReferralDeleteProcessor;
+use App\State\ReferralGeneratePdfProcessor;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -27,6 +29,21 @@ use Symfony\Component\Serializer\Attribute\Ignore;
         ),
         new Delete(
             processor: ReferralDeleteProcessor::class,
+        ),
+        new Post(
+            uriTemplate: '/referrals/{id}/generate-pdf',
+            name: 'generate_pdf',
+            status: 200,
+            read: true,
+            input: false,
+            processor: ReferralGeneratePdfProcessor::class,
+        ),
+        new Get(
+            uriTemplate: '/referrals/{id}/pdf',
+            name: 'download_pdf',
+            controller: ReferralPdfDownloadController::class,
+            read: false,
+            output: false,
         ),
     ],
     order: ['issueDate' => 'DESC'],

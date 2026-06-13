@@ -377,7 +377,7 @@
         "Tests pass (PHPUnit covers generate-pdf updating pdfPath/pdfGeneratedAt, and downloading the generated file)"
       ],
       "priority": 24,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
