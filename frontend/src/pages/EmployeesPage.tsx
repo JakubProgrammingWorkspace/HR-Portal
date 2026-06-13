@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { apiFetch } from '../api/client';
+import { Plus, Search, Filter, Trash2, Mail, Phone, MapPin, User, ChevronDown } from 'lucide-react';
 
 interface CompanyOption {
   id: number;
@@ -43,9 +44,8 @@ async function extractErrorMessage(response: Response): Promise<string> {
       return body.detail;
     }
   } catch {
-    // ignore - fall through to the generic message below
+    // ignore
   }
-
   return 'Wystąpił błąd. Spróbuj ponownie.';
 }
 
@@ -60,9 +60,8 @@ async function extractFieldErrors(response: Response): Promise<FieldErrors> {
       return errors;
     }
   } catch {
-    // ignore - no field-level errors available
+    // ignore
   }
-
   return {};
 }
 
@@ -77,6 +76,7 @@ export default function EmployeesPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [companyFilter, setCompanyFilter] = useState('');
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   useEffect(() => {
     void loadData();
@@ -142,100 +142,163 @@ export default function EmployeesPage() {
 
   function handleCreated(employee: EmployeeRow) {
     setEmployees((prev) => [...prev, employee]);
+    setIsFormOpen(false);
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-gray-800">Pracownicy</h1>
-      <p className="mt-2 text-sm text-gray-600">Zarządzanie pracownikami.</p>
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-white">Pracownicy</h1>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Zarządzanie kartotekami i danymi kontaktowymi pracowników.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsFormOpen(!isFormOpen)}
+          className="btn-magnetic bg-brand-moss hover:bg-brand-moss-light text-white rounded-xl px-4 py-2.5 text-sm font-semibold flex items-center gap-2 self-start sm:self-auto shadow-md shadow-brand-moss/10"
+        >
+          <Plus className="w-4 h-4" />
+          {isFormOpen ? 'Zamknij formularz' : 'Dodaj pracownika'}
+        </button>
+      </div>
 
       {error && (
-        <p className="mt-4 rounded-md bg-red-50 px-4 py-2 text-sm text-red-600">{error}</p>
+        <p className="rounded-xl bg-red-50 dark:bg-red-950/20 px-4 py-2.5 text-sm font-medium text-brand-rust border border-red-200/20">{error}</p>
       )}
 
-      <AddEmployeeForm companies={companies} onCreated={handleCreated} />
-
-      <div className="mt-6 flex flex-wrap gap-4">
-        <div>
-          <label htmlFor="employee-search" className="block text-sm font-medium text-gray-700">
-            Szukaj
-          </label>
-          <input
-            id="employee-search"
-            type="text"
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Imię lub nazwisko"
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
+      {isFormOpen && (
+        <div className="animate-slide-down">
+          <AddEmployeeForm companies={companies} onCreated={handleCreated} />
         </div>
-        <div>
-          <label htmlFor="employee-company-filter" className="block text-sm font-medium text-gray-700">
-            Firma
+      )}
+
+      {/* Filter panel */}
+      <div className="card-tactile p-4 bg-white dark:bg-slate-900 flex flex-wrap gap-4 items-end">
+        <div className="min-w-[200px] flex-1">
+          <label htmlFor="employee-search" className="block text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+            Wyszukaj pracownika
           </label>
-          <select
-            id="employee-company-filter"
-            value={companyFilter}
-            onChange={(event) => setCompanyFilter(event.target.value)}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            <option value="">Wszystkie firmy</option>
-            {companies.map((company) => (
-              <option key={company.id} value={company.id}>
-                {company.name}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-slate-400" />
+            </div>
+            <input
+              id="employee-search"
+              type="text"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Imię lub nazwisko..."
+              className="pl-10 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+            />
+          </div>
+        </div>
+        <div className="min-w-[200px] flex-1">
+          <label htmlFor="employee-company-filter" className="block text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+            Filtruj według firmy
+          </label>
+          <div className="relative">
+            <select
+              id="employee-company-filter"
+              value={companyFilter}
+              onChange={(event) => setCompanyFilter(event.target.value)}
+              className="block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm appearance-none focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+            >
+              <option value="">Wszystkie firmy</option>
+              {companies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.name}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+              <ChevronDown className="h-4 w-4" />
+            </div>
+          </div>
         </div>
       </div>
 
       {loading ? (
-        <p className="mt-6 text-sm text-gray-600">Wczytywanie...</p>
+        <div className="space-y-4 mt-6">
+          {[1, 2, 3, 4].map((n) => (
+            <div key={n} className="shimmer h-16 w-full rounded-2xl" />
+          ))}
+        </div>
       ) : (
-        <div className="mt-6 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Imię i nazwisko</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Telefon</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">E-mail</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Adres</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Firma</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Akcje</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredEmployees.map((employee) => (
-                <tr key={employee.id}>
-                  <td className="px-4 py-3 text-sm text-gray-800">
-                    {employee.firstName} {employee.lastName}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-800">{employee.phone}</td>
-                  <td className="px-4 py-3 text-sm text-gray-800">{employee.email}</td>
-                  <td className="px-4 py-3 text-sm text-gray-800">{employee.address}</td>
-                  <td className="px-4 py-3 text-sm text-gray-800">
-                    {companyNames.get(employee.company) ?? '—'}
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(employee)}
-                      className="font-medium text-red-600 hover:text-red-800"
-                    >
-                      Usuń
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {filteredEmployees.length === 0 && (
+        <div className="overflow-hidden border border-slate-100 dark:border-slate-800/80 rounded-2xl bg-white dark:bg-slate-900 shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800">
+              <thead className="bg-slate-50/50 dark:bg-slate-800/20">
                 <tr>
-                  <td colSpan={6} className="px-4 py-3 text-sm text-gray-500">
-                    Brak pracowników.
-                  </td>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Imię i nazwisko / PESEL</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Kontakt</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Adres zamieszkania</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Przypisana firma</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Akcje</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {filteredEmployees.map((employee) => (
+                  <tr key={employee.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold">
+                          {employee.firstName[0]}{employee.lastName[0]}
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-slate-800 dark:text-white">
+                            {employee.firstName} {employee.lastName}
+                          </div>
+                          <div className="text-xs font-mono text-slate-400 dark:text-slate-500 mt-0.5">
+                            PESEL: {employee.pesel}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+                          <Phone className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="font-mono">{employee.phone}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+                          <Mail className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{employee.email}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-start gap-1.5 text-xs text-slate-600 dark:text-slate-400 max-w-[200px]">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                        <span className="line-clamp-2">{employee.address}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-3 py-1 text-xs font-medium text-slate-800 dark:text-slate-300">
+                        {companyNames.get(employee.company) ?? '—'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(employee)}
+                        className="btn-magnetic p-2 rounded-lg bg-red-50 dark:bg-red-950/20 text-brand-rust hover:bg-brand-rust hover:text-white dark:hover:bg-brand-rust dark:hover:text-white transition-colors"
+                        title="Usuń pracownika"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {filteredEmployees.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-8 text-center text-sm text-slate-400">
+                      Brak zarejestrowanych pracowników spełniających kryteria.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
@@ -339,12 +402,12 @@ function AddEmployeeForm({ companies, onCreated }: AddEmployeeFormProps) {
   }
 
   return (
-    <div className="mt-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-bold text-gray-800">Dodaj pracownika</h2>
+    <div className="card-tactile p-6 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 shadow-md">
+      <h2 className="text-lg font-bold text-slate-800 dark:text-white">Dodaj nowego pracownika</h2>
       <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="employee-first-name" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="employee-first-name" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
               Imię
             </label>
             <input
@@ -352,12 +415,12 @@ function AddEmployeeForm({ companies, onCreated }: AddEmployeeFormProps) {
               type="text"
               value={firstName}
               onChange={(event) => setFirstName(event.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
             />
-            {fieldErrors.firstName && <p className="mt-1 text-sm text-red-600">{fieldErrors.firstName}</p>}
+            {fieldErrors.firstName && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.firstName}</p>}
           </div>
           <div>
-            <label htmlFor="employee-last-name" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="employee-last-name" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
               Nazwisko
             </label>
             <input
@@ -365,14 +428,15 @@ function AddEmployeeForm({ companies, onCreated }: AddEmployeeFormProps) {
               type="text"
               value={lastName}
               onChange={(event) => setLastName(event.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
             />
-            {fieldErrors.lastName && <p className="mt-1 text-sm text-red-600">{fieldErrors.lastName}</p>}
+            {fieldErrors.lastName && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.lastName}</p>}
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="employee-pesel" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="employee-pesel" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
               PESEL
             </label>
             <input
@@ -380,12 +444,13 @@ function AddEmployeeForm({ companies, onCreated }: AddEmployeeFormProps) {
               type="text"
               value={pesel}
               onChange={(event) => setPesel(event.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="11 cyfr"
+              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white font-mono"
             />
-            {fieldErrors.pesel && <p className="mt-1 text-sm text-red-600">{fieldErrors.pesel}</p>}
+            {fieldErrors.pesel && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.pesel}</p>}
           </div>
           <div>
-            <label htmlFor="employee-phone" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="employee-phone" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
               Telefon
             </label>
             <input
@@ -393,14 +458,15 @@ function AddEmployeeForm({ companies, onCreated }: AddEmployeeFormProps) {
               type="text"
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white font-mono"
             />
-            {fieldErrors.phone && <p className="mt-1 text-sm text-red-600">{fieldErrors.phone}</p>}
+            {fieldErrors.phone && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.phone}</p>}
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="employee-email" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="employee-email" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
               E-mail
             </label>
             <input
@@ -408,54 +474,64 @@ function AddEmployeeForm({ companies, onCreated }: AddEmployeeFormProps) {
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="example@mail.com"
+              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
             />
-            {fieldErrors.email && <p className="mt-1 text-sm text-red-600">{fieldErrors.email}</p>}
+            {fieldErrors.email && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.email}</p>}
           </div>
           <div>
-            <label htmlFor="employee-company" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="employee-company" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
               Firma
             </label>
-            <select
-              id="employee-company"
-              value={companyId}
-              onChange={(event) => setCompanyId(event.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              <option value="">Wybierz firmę</option>
-              {companies.map((company) => (
-                <option key={company.id} value={company.id}>
-                  {company.name}
-                </option>
-              ))}
-            </select>
-            {fieldErrors.company && <p className="mt-1 text-sm text-red-600">{fieldErrors.company}</p>}
+            <div className="relative mt-1">
+              <select
+                id="employee-company"
+                value={companyId}
+                onChange={(event) => setCompanyId(event.target.value)}
+                className="block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm appearance-none focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+              >
+                <option value="">Wybierz firmę</option>
+                {companies.map((company) => (
+                  <option key={company.id} value={company.id}>
+                    {company.name}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                <ChevronDown className="h-4 w-4" />
+              </div>
+            </div>
+            {fieldErrors.company && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.company}</p>}
           </div>
         </div>
+
         <div>
-          <label htmlFor="employee-address" className="block text-sm font-medium text-gray-700">
-            Adres
+          <label htmlFor="employee-address" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+            Adres zamieszkania
           </label>
           <input
             id="employee-address"
             type="text"
             value={address}
             onChange={(event) => setAddress(event.target.value)}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
           />
-          {fieldErrors.address && <p className="mt-1 text-sm text-red-600">{fieldErrors.address}</p>}
+          {fieldErrors.address && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.address}</p>}
         </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <div className="flex justify-end">
+
+        {error && <p className="text-sm font-medium text-brand-rust">{error}</p>}
+        
+        <div className="flex justify-end pt-2">
           <button
             type="submit"
             disabled={isSubmitting}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="btn-magnetic rounded-xl bg-brand-moss hover:bg-brand-moss-light text-white px-5 py-2.5 text-sm font-semibold hover:shadow-lg disabled:opacity-50"
           >
-            Dodaj
+            {isSubmitting ? 'Zapisywanie...' : 'Zapisz pracownika'}
           </button>
         </div>
       </form>
     </div>
   );
 }
+

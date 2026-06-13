@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { apiFetch } from '../api/client';
+import { Plus, Trash2, Building2, MapPin, Hash, Briefcase } from 'lucide-react';
 
 interface CompanyRow {
   id: number;
@@ -33,9 +34,8 @@ async function extractErrorMessage(response: Response): Promise<string> {
       return body.detail;
     }
   } catch {
-    // ignore - fall through to the generic message below
+    // ignore
   }
-
   return 'Wystąpił błąd. Spróbuj ponownie.';
 }
 
@@ -50,9 +50,8 @@ async function extractFieldErrors(response: Response): Promise<FieldErrors> {
       return errors;
     }
   } catch {
-    // ignore - no field-level errors available
+    // ignore
   }
-
   return {};
 }
 
@@ -60,6 +59,7 @@ export default function CompaniesPage() {
   const [companies, setCompanies] = useState<CompanyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   useEffect(() => {
     void loadData();
@@ -100,60 +100,96 @@ export default function CompaniesPage() {
 
   function handleCreated(company: CompanyRow) {
     setCompanies((prev) => [...prev, company]);
+    setIsFormOpen(false);
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-gray-800">Firmy</h1>
-      <p className="mt-2 text-sm text-gray-600">Zarządzanie firmami.</p>
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-white">Firmy</h1>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Zarządzanie rejestrem partnerów biznesowych i powiązanych firm.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsFormOpen(!isFormOpen)}
+          className="btn-magnetic bg-brand-moss hover:bg-brand-moss-light text-white rounded-xl px-4 py-2.5 text-sm font-semibold flex items-center gap-2 self-start sm:self-auto shadow-md shadow-brand-moss/10"
+        >
+          <Plus className="w-4 h-4" />
+          {isFormOpen ? 'Zamknij formularz' : 'Dodaj firmę'}
+        </button>
+      </div>
 
       {error && (
-        <p className="mt-4 rounded-md bg-red-50 px-4 py-2 text-sm text-red-600">{error}</p>
+        <p className="rounded-xl bg-red-50 dark:bg-red-950/20 px-4 py-2.5 text-sm font-medium text-brand-rust border border-red-200/20">{error}</p>
       )}
 
-      <AddCompanyForm onCreated={handleCreated} />
+      {isFormOpen && (
+        <div className="animate-slide-down">
+          <AddCompanyForm onCreated={handleCreated} />
+        </div>
+      )}
 
       {loading ? (
-        <p className="mt-6 text-sm text-gray-600">Wczytywanie...</p>
+        <div className="space-y-4">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="shimmer h-16 w-full rounded-2xl" />
+          ))}
+        </div>
       ) : (
-        <div className="mt-6 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Nazwa</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">NIP</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Adres</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Akcje</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {companies.map((company) => (
-                <tr key={company.id}>
-                  <td className="px-4 py-3 text-sm text-gray-800">{company.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-800">{company.nip}</td>
-                  <td className="px-4 py-3 text-sm text-gray-800">
-                    {company.street}, {company.postalCode} {company.city}
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(company)}
-                      className="font-medium text-red-600 hover:text-red-800"
-                    >
-                      Usuń
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {companies.length === 0 && (
+        <div className="overflow-hidden border border-slate-100 dark:border-slate-800/80 rounded-2xl bg-white dark:bg-slate-900 shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800">
+              <thead className="bg-slate-50/50 dark:bg-slate-800/20">
                 <tr>
-                  <td colSpan={4} className="px-4 py-3 text-sm text-gray-500">
-                    Brak firm.
-                  </td>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Nazwa firmy</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">NIP</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Adres rejestrowy</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Akcje</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {companies.map((company) => (
+                  <tr key={company.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300">
+                          <Building2 className="w-5 h-5" />
+                        </div>
+                        <span className="text-sm font-semibold text-slate-800 dark:text-white">{company.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-mono text-slate-600 dark:text-slate-300 font-medium">
+                      {company.nip}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span>{company.street}, {company.postalCode} {company.city}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(company)}
+                        className="btn-magnetic p-2 rounded-lg bg-red-50 dark:bg-red-950/20 text-brand-rust hover:bg-brand-rust hover:text-white dark:hover:bg-brand-rust dark:hover:text-white transition-colors"
+                        title="Usuń firmę"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {companies.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-8 text-center text-sm text-slate-400">
+                      Brak firm w bazie danych.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
@@ -236,25 +272,25 @@ function AddCompanyForm({ onCreated }: AddCompanyFormProps) {
   }
 
   return (
-    <div className="mt-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-bold text-gray-800">Dodaj firmę</h2>
+    <div className="card-tactile p-6 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 shadow-md">
+      <h2 className="text-lg font-bold text-slate-800 dark:text-white">Dodaj nową firmę</h2>
       <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="company-name" className="block text-sm font-medium text-gray-700">
-              Nazwa
+            <label htmlFor="company-name" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Nazwa firmy
             </label>
             <input
               id="company-name"
               type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
             />
-            {fieldErrors.name && <p className="mt-1 text-sm text-red-600">{fieldErrors.name}</p>}
+            {fieldErrors.name && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.name}</p>}
           </div>
           <div>
-            <label htmlFor="company-nip" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="company-nip" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
               NIP
             </label>
             <input
@@ -262,27 +298,30 @@ function AddCompanyForm({ onCreated }: AddCompanyFormProps) {
               type="text"
               value={nip}
               onChange={(event) => setNip(event.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="10 cyfr"
+              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white font-mono"
             />
-            {fieldErrors.nip && <p className="mt-1 text-sm text-red-600">{fieldErrors.nip}</p>}
+            {fieldErrors.nip && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.nip}</p>}
           </div>
         </div>
+        
         <div>
-          <label htmlFor="company-street" className="block text-sm font-medium text-gray-700">
-            Ulica
+          <label htmlFor="company-street" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+            Ulica i numer
           </label>
           <input
             id="company-street"
             type="text"
             value={street}
             onChange={(event) => setStreet(event.target.value)}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
           />
-          {fieldErrors.street && <p className="mt-1 text-sm text-red-600">{fieldErrors.street}</p>}
+          {fieldErrors.street && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.street}</p>}
         </div>
-        <div className="grid grid-cols-2 gap-4">
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="company-city" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="company-city" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
               Miasto
             </label>
             <input
@@ -290,12 +329,12 @@ function AddCompanyForm({ onCreated }: AddCompanyFormProps) {
               type="text"
               value={city}
               onChange={(event) => setCity(event.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
             />
-            {fieldErrors.city && <p className="mt-1 text-sm text-red-600">{fieldErrors.city}</p>}
+            {fieldErrors.city && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.city}</p>}
           </div>
           <div>
-            <label htmlFor="company-postal-code" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="company-postal-code" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
               Kod pocztowy
             </label>
             <input
@@ -303,22 +342,26 @@ function AddCompanyForm({ onCreated }: AddCompanyFormProps) {
               type="text"
               value={postalCode}
               onChange={(event) => setPostalCode(event.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="00-000"
+              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white font-mono"
             />
-            {fieldErrors.postalCode && <p className="mt-1 text-sm text-red-600">{fieldErrors.postalCode}</p>}
+            {fieldErrors.postalCode && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.postalCode}</p>}
           </div>
         </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <div className="flex justify-end">
+
+        {error && <p className="text-sm font-medium text-brand-rust">{error}</p>}
+        
+        <div className="flex justify-end pt-2">
           <button
             type="submit"
             disabled={isSubmitting}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="btn-magnetic rounded-xl bg-brand-moss hover:bg-brand-moss-light text-white px-5 py-2.5 text-sm font-semibold hover:shadow-lg disabled:opacity-50"
           >
-            Dodaj
+            {isSubmitting ? 'Zapisywanie...' : 'Zapisz firmę'}
           </button>
         </div>
       </form>
     </div>
   );
 }
+

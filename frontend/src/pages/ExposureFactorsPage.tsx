@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { apiFetch } from '../api/client';
+import { Plus, Trash2, Shield, Eye, ShieldAlert, ChevronDown } from 'lucide-react';
 
 interface FactorRow {
   id: number;
@@ -23,9 +24,8 @@ async function extractErrorMessage(response: Response): Promise<string> {
       return body.detail;
     }
   } catch {
-    // ignore - fall through to the generic message below
+    // ignore
   }
-
   return 'Wystąpił błąd. Spróbuj ponownie.';
 }
 
@@ -77,18 +77,24 @@ export default function ExposureFactorsPage() {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-gray-800">Czynniki narażeń</h1>
-      <p className="mt-2 text-sm text-gray-600">Katalog czynników narażeń zawodowych.</p>
+    <div className="space-y-6 animate-fade-in">
+      <div>
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-white">Czynniki Narażeń</h1>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Katalog czynników szkodliwych i niebezpiecznych w środowisku pracy.</p>
+      </div>
 
       {error && (
-        <p className="mt-4 rounded-md bg-red-50 px-4 py-2 text-sm text-red-600">{error}</p>
+        <p className="rounded-xl bg-red-50 dark:bg-red-950/20 px-4 py-2.5 text-sm font-medium text-brand-rust border border-red-200/20">{error}</p>
       )}
 
       {loading ? (
-        <p className="mt-6 text-sm text-gray-600">Wczytywanie...</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {[1, 2, 3, 4].map((n) => (
+            <div key={n} className="shimmer h-48 w-full rounded-2xl" />
+          ))}
+        </div>
       ) : (
-        <div className="mt-6 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {categories.map((category) => (
             <CategoryCard
               key={category.id}
@@ -128,37 +134,45 @@ function CategoryCard({ category, onFactorAdded, onFactorRemoved }: CategoryCard
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-bold text-gray-800">
-        {category.code}. {category.name}
-      </h2>
+    <div className="card-tactile p-6 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 shadow-md flex flex-col justify-between h-full">
+      <div>
+        <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
+          <div className="w-8 h-8 rounded-lg bg-brand-moss/10 dark:bg-brand-moss/20 flex items-center justify-center text-brand-moss dark:text-brand-moss-light">
+            <Shield className="w-4.5 h-4.5" />
+          </div>
+          <h2 className="text-md font-bold text-slate-800 dark:text-white">
+            {category.code}. {category.name}
+          </h2>
+        </div>
 
-      {error && (
-        <p className="mt-2 rounded-md bg-red-50 px-4 py-2 text-sm text-red-600">{error}</p>
-      )}
-
-      <ul className="mt-4 divide-y divide-gray-200">
-        {category.factors.map((factor) => (
-          <li key={factor.id} className="flex items-center justify-between gap-4 py-2">
-            <div>
-              <p className="text-sm font-medium text-gray-800">{factor.name}</p>
-              {factor.description && (
-                <p className="text-sm text-gray-500">{factor.description}</p>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => handleRemove(factor)}
-              className="shrink-0 font-medium text-red-600 hover:text-red-800"
-            >
-              Usuń
-            </button>
-          </li>
-        ))}
-        {category.factors.length === 0 && (
-          <li className="py-2 text-sm text-gray-500">Brak czynników.</li>
+        {error && (
+          <p className="rounded-xl bg-red-50 dark:bg-red-950/20 px-3 py-2 text-xs font-semibold text-brand-rust mb-3">{error}</p>
         )}
-      </ul>
+
+        <ul className="divide-y divide-slate-100 dark:divide-slate-800 space-y-1">
+          {category.factors.map((factor) => (
+            <li key={factor.id} className="flex items-center justify-between gap-4 py-2.5">
+              <div>
+                <p className="text-sm font-semibold text-slate-800 dark:text-white">{factor.name}</p>
+                {factor.description && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{factor.description}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => handleRemove(factor)}
+                className="btn-magnetic p-1.5 rounded-lg bg-red-50 dark:bg-red-950/20 text-brand-rust hover:bg-brand-rust hover:text-white dark:hover:bg-brand-rust dark:hover:text-white transition-colors shrink-0"
+                title="Usuń czynnik"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </li>
+          ))}
+          {category.factors.length === 0 && (
+            <li className="py-4 text-center text-sm text-slate-400 font-medium">Brak czynników w tej kategorii.</li>
+          )}
+        </ul>
+      </div>
 
       <AddFactorForm categoryId={category.id} onAdded={onFactorAdded} />
     </div>
@@ -214,42 +228,47 @@ function AddFactorForm({ categoryId, onAdded }: AddFactorFormProps) {
 
   return (
     <form
-      className="mt-4 flex flex-wrap items-end gap-3 border-t border-gray-200 pt-4"
+      className="mt-6 flex flex-col gap-3 border-t border-slate-100 dark:border-slate-800 pt-4"
       onSubmit={handleSubmit}
     >
-      <div className="min-w-[180px] flex-1">
-        <label htmlFor={`factor-name-${categoryId}`} className="block text-sm font-medium text-gray-700">
-          Nazwa
-        </label>
-        <input
-          id={`factor-name-${categoryId}`}
-          type="text"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
-        {nameError && <p className="mt-1 text-sm text-red-600">{nameError}</p>}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label htmlFor={`factor-name-${categoryId}`} className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
+            Nazwa czynnika
+          </label>
+          <input
+            id={`factor-name-${categoryId}`}
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-1.5 text-xs focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+          />
+          {nameError && <p className="mt-1 text-[10px] text-brand-rust font-semibold">{nameError}</p>}
+        </div>
+        <div>
+          <label htmlFor={`factor-description-${categoryId}`} className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
+            Opis (opcjonalnie)
+          </label>
+          <input
+            id={`factor-description-${categoryId}`}
+            type="text"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-1.5 text-xs focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+          />
+        </div>
       </div>
-      <div className="min-w-[180px] flex-1">
-        <label htmlFor={`factor-description-${categoryId}`} className="block text-sm font-medium text-gray-700">
-          Opis (opcjonalnie)
-        </label>
-        <input
-          id={`factor-description-${categoryId}`}
-          type="text"
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
-      </div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-xs text-brand-rust font-semibold">{error}</p>}
+      
       <button
         type="submit"
         disabled={isSubmitting}
-        className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        className="btn-magnetic w-full rounded-xl bg-brand-moss hover:bg-brand-moss-light text-white py-2 text-xs font-semibold hover:shadow-md disabled:opacity-50 flex items-center justify-center gap-1.5"
       >
-        Dodaj czynnik
+        <Plus className="w-3.5 h-3.5" />
+        {isSubmitting ? 'Dodawanie...' : 'Dodaj czynnik'}
       </button>
     </form>
   );
 }
+
