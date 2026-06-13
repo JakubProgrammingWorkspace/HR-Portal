@@ -1265,3 +1265,81 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
     to go through `getExposureFactorDetails()`, which is for the JSON API
     output only.
 ---
+
+## 2026-06-13 - US-023
+- Installed `symfony/twig-bundle` (^6.4) and `dompdf/dompdf` (^3.1) via composer
+  (Flex recipe added config/packages/twig.yaml and templates/base.html.twig,
+  registered TwigBundle in config/bundles.php).
+- Added `App\Enum\ExaminationType::label()` (Polish display labels: wstepne ->
+  "wstępne", okresowe -> "okresowe", kontrolne -> "kontrolne") for use in the PDF
+  title.
+- Added templates/referral_pdf.html.twig reproducing the official "Skierowanie na
+  badania lekarskie" layout: employer (Company name/address/NIP) + issuePlace/
+  issueDate header, uppercase title with the examination type label, employee
+  name/PESEL/address, job position + job description (white-space: pre-wrap to
+  preserve newlines), all 5 ExposureCategory sections (I-V, always rendered in
+  sortOrder even if a category has no selected factors for this referral - shows
+  "Nie wskazano czynników z tej grupy." instead) each as a table of {factor name,
+  exposureDetails} for factors selected on this referral, a total-factor-count
+  line, and a signature line.
+- Added src/Service/ReferralPdfGeneratorService.php::generate(Referral $referral):
+  string - groups the referral's ReferralExposureFactor rows by
+  factor->getCategory()->getId(), fetches all 5 ExposureCategory rows ordered by
+  sortOrder (ExposureCategoryRepository::findBy([], ['sortOrder' => 'ASC'])) to
+  build the `categories` template array (each with its matched factors or []),
+  renders the Twig template, converts to PDF via `new Dompdf()` ->
+  loadHtml/setPaper('A4')/render(), and writes the output to
+  `{referral_pdf_dir}/{id}.pdf` (creating the directory if missing), returning
+  `var/referrals/{id}.pdf` (relative to kernel.project_dir). Regenerating
+  overwrites the file at the same path (same filename derived from the referral
+  id).
+- Added `referral_pdf_dir: '%kernel.project_dir%/var/referrals'` parameter and a
+  `public: true` service declaration for ReferralPdfGeneratorService in
+  config/services.yaml (see new Codebase Patterns bullet on why).
+- tests/Service/ReferralPdfGeneratorServiceTest.php (KernelTestCase): loads
+  AppFixtures, persists a Company/Employee/Referral with 2
+  ReferralExposureFactor rows from different categories (Hałas = I, Pyły
+  zawierające azbest = II) and a multi-line jobDescription, calls
+  `ReferralPdfGeneratorService::generate()`, asserts the returned path is
+  `var/referrals/{id}.pdf`, the file exists under
+  `$kernel->getProjectDir()`, and its size is > 0; deletes the file afterwards.
+- Added backend/CLAUDE.md documenting the PDF service's location, the
+  `referral_pdf_dir` parameter, the relative-path return convention, and that the
+  service is `public: true`.
+- Files changed: backend/{composer.json,composer.lock,symfony.lock,
+  config/bundles.php,config/packages/twig.yaml (new),
+  config/services.yaml,templates/{base.html.twig,referral_pdf.html.twig} (new),
+  src/Enum/ExaminationType.php,
+  src/Service/ReferralPdfGeneratorService.php (new),
+  tests/Service/ReferralPdfGeneratorServiceTest.php (new), CLAUDE.md (new)},
+  prd.json, progress.txt.
+- Verified: `bin/console lint:container` OK, `php -l` clean on all new/changed
+  PHP files, `docker compose exec -e APP_ENV=test php bin/phpunit` -> 35 tests,
+  110 assertions, OK (1 new test). No entity/schema changes, so
+  `doctrine:schema:validate` is unaffected.
+- **Learnings for future iterations:**
+  - A service with no other service depending on it and not directly used by a
+    controller/processor gets removed/inlined by Symfony's container compiler
+    even with `framework.test: true` - `static::getContainer()->get(SomeService::class)`
+    in a test then throws ServiceNotFoundException ("removed or inlined when the
+    container was compiled"). Fix: explicitly declare `public: true` for that
+    service id in config/services.yaml. This will likely become moot once US-024
+    injects ReferralPdfGeneratorService into its generate-pdf processor (making it
+    "used"), but the `public: true` declaration is harmless to leave.
+  - Twig's `|nl2br` filter is NOT available in core Twig (no twig/extra-bundle
+    installed) - for preserving newlines in a text field rendered to HTML/PDF, wrap
+    the output in a `<div style="white-space: pre-wrap;">{{ value }}</div>` instead
+    (auto-escaping still applies, newlines render via CSS).
+  - dompdf renders plain HTML/CSS (subset) to PDF via `new Dompdf();
+    $dompdf->loadHtml($html); $dompdf->setPaper('A4'); $dompdf->render();
+    $dompdf->output()` - no Symfony-specific wiring beyond requiring
+    `dompdf/dompdf` and calling it directly from a service (Twig renders the HTML
+    string first, dompdf only consumes the string).
+  - US-024 (generate-pdf/download endpoints) should inject
+    ReferralPdfGeneratorService directly into a custom operation/controller that
+    delegates entirely to it (per the AC), call `setPdfPath()`/
+    `setPdfGeneratedAt(new \DateTimeImmutable())` on the Referral with the
+    returned relative path + persist/flush, and for the download endpoint resolve
+    `$kernel->getProjectDir() . '/' . $referral->getPdfPath()` and stream it with
+    a `BinaryFileResponse`, returning 404 if `pdfPath` is null.
+---

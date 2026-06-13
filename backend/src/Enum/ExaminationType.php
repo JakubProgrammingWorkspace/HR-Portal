@@ -15,4 +15,13 @@ enum ExaminationType: string
     {
         return array_map(static fn (self $case): string => $case->value, self::cases());
     }
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::Wstepne => 'wstępne',
+            self::Okresowe => 'okresowe',
+            self::Kontrolne => 'kontrolne',
+        };
+    }
 }

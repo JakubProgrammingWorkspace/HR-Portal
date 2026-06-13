@@ -363,7 +363,7 @@
         "Tests pass (PHPUnit test generates a PDF for a sample referral with factors from multiple categories and asserts the file exists and is non-empty)"
       ],
       "priority": 23,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
