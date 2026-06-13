@@ -1478,3 +1478,45 @@ Started: Fri Jun 12 03:28:37 PM CEST 2026
     temporary `<a download>` click, NOT a plain `<a href="...">` - `<a href>`
     can't attach the `Authorization` header API Platform requires.
 ---
+
+## 2026-06-13 - US-026
+- frontend/src/components/Layout.tsx: renamed the module-level `navItems`
+  array to `ALL_NAV_ITEMS` and added `adminOnly: true` to the "Użytkownicy"
+  entry; inside the component, `navItems = ALL_NAV_ITEMS.filter(item =>
+  !item.adminOnly || hasRole('ROLE_ADMIN'))` so the sidebar (desktop) and
+  bottom nav (mobile) both hide "Użytkownicy" for non-admins.
+- Header (top bar): replaced the static "Użytkownik" placeholder with
+  `getCurrentUser()?.email` and added a "Wyloguj" button (same
+  `handleLogout` as the existing sidebar/mobile-nav buttons) next to it, per
+  the AC's "top bar shows the logged-in user's name/email and a Wyloguj
+  button".
+- No App.tsx/RequireAuth/RequireAdmin changes needed - the authentication
+  guard (RequireAuth wraps the Layout route covering all panel routes) and
+  the admin-only route guard for /users (RequireAdmin, redirects to
+  /dashboard) were already in place from US-008/US-011.
+- Files changed: frontend/src/components/Layout.tsx, prd.json, progress.txt.
+- Verified: `docker compose exec node npm run typecheck` passes (tsc
+  --noEmit). `docker compose exec -e APP_ENV=test php bin/phpunit` -> 38
+  tests, 123 assertions, OK (unchanged - no backend changes). Used
+  playwright-cli as admin@hr-portal.local: dashboard sidebar shows
+  "Użytkownicy" and the top bar shows "admin@hr-portal.local" + "Wyloguj";
+  created a non-admin user (test.nonadmin@hr-portal.local / Test1234, role
+  ROLE_USER) via the Users panel, logged out, logged in as that user -
+  sidebar does NOT show "Użytkownicy", top bar shows
+  "test.nonadmin@hr-portal.local" + "Wyloguj"; navigating directly to /users
+  redirects to /dashboard. Logged back in as admin and deleted the test user
+  (cleanup). No new console errors (only the pre-existing favicon 404 and
+  React Router v7 flag warnings).
+- **Learnings for future iterations:**
+  - A `<select multiple>` with no option marked `selected` in the initial
+    render can have its first `<option>` auto-selected by the browser on
+    submit if the component's state for that field starts as `[]` but the
+    underlying DOM listbox still renders with no explicit `selected`
+    attributes - when creating a test user via UsersPage's "Dodaj
+    użytkownika" modal without picking a role, it was created with
+    `roleCodes: ["ROLE_ADMIN"]` (the first option) instead of `[]`. Not a bug
+    introduced by this story, just a gotcha when scripting the modal via
+    playwright - explicitly `selectOption([...])` the desired roles (or none,
+    if the modal/DTO actually supports an empty array) rather than leaving
+    the listbox untouched.
+---

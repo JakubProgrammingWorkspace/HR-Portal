@@ -1,18 +1,18 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { clearToken } from '../api/client';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Building2, 
-  ShieldAlert, 
-  FileText, 
-  LogOut, 
-  UserCheck 
+import { clearToken, getCurrentUser, hasRole } from '../api/client';
+import {
+  LayoutDashboard,
+  Users,
+  Building2,
+  ShieldAlert,
+  FileText,
+  LogOut,
+  UserCheck
 } from 'lucide-react';
 
-const navItems = [
+const ALL_NAV_ITEMS = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/users', label: 'Użytkownicy', icon: Users },
+  { to: '/users', label: 'Użytkownicy', icon: Users, adminOnly: true },
   { to: '/companies', label: 'Firmy', icon: Building2 },
   { to: '/employees', label: 'Pracownicy', icon: UserCheck },
   { to: '/exposure-factors', label: 'Czynniki narażeń', icon: ShieldAlert },
@@ -21,6 +21,9 @@ const navItems = [
 
 export default function Layout() {
   const navigate = useNavigate();
+  const isAdmin = hasRole('ROLE_ADMIN');
+  const navItems = ALL_NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
+  const user = getCurrentUser();
 
   function handleLogout() {
     clearToken();
@@ -85,7 +88,17 @@ export default function Layout() {
         <header className="flex h-16 items-center justify-between px-6 md:px-8 border-b border-slate-200/40 dark:border-slate-800/40 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md sticky top-0 z-30">
           <div className="text-lg font-bold tracking-tight text-slate-800 dark:text-white">Panel Administracyjny</div>
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Użytkownik</span>
+            {user && (
+              <span className="text-sm font-medium text-slate-600 dark:text-slate-400">{user.email}</span>
+            )}
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="btn-magnetic flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-brand-rust dark:hover:text-brand-rust transition-colors shadow-sm"
+            >
+              <LogOut className="w-4 h-4" />
+              Wyloguj
+            </button>
           </div>
         </header>
         <main className="flex-1 overflow-auto p-6 md:p-8 max-w-7xl w-full mx-auto">

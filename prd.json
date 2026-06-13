@@ -409,7 +409,7 @@
         "Verify in browser using the playwright-cli skill: log in as a non-admin user (create one via the admin panel) and confirm \"Użytkownicy\" is not visible/accessible"
       ],
       "priority": 26,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
