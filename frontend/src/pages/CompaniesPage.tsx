@@ -137,10 +137,10 @@ export default function CompaniesPage() {
           ))}
         </div>
       ) : (
-        <div className="overflow-hidden border border-slate-100 dark:border-slate-800/80 rounded-2xl bg-white dark:bg-slate-900 shadow-sm">
+        <div className="overflow-hidden border border-slate-100 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-900 shadow-sm">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800">
-              <thead className="bg-slate-50/50 dark:bg-slate-800/20">
+              <thead className="bg-white dark:bg-slate-900/80">
                 <tr>
                   <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Nazwa firmy</th>
                   <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">NIP</th>
@@ -150,7 +150,7 @@ export default function CompaniesPage() {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {companies.map((company) => (
-                  <tr key={company.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                  <tr key={company.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300">
@@ -272,7 +272,7 @@ function AddCompanyForm({ onCreated }: AddCompanyFormProps) {
   }
 
   return (
-    <div className="card-tactile p-6 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 shadow-md">
+    <div className="card-tactile p-6 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-700 shadow-md">
       <h2 className="text-lg font-bold text-slate-800 dark:text-white">Dodaj nową firmę</h2>
       <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -285,7 +285,7 @@ function AddCompanyForm({ onCreated }: AddCompanyFormProps) {
               type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
             {fieldErrors.name && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.name}</p>}
           </div>
@@ -299,7 +299,7 @@ function AddCompanyForm({ onCreated }: AddCompanyFormProps) {
               value={nip}
               onChange={(event) => setNip(event.target.value)}
               placeholder="10 cyfr"
-              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white font-mono"
+              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 font-mono"
             />
             {fieldErrors.nip && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.nip}</p>}
           </div>
@@ -314,7 +314,7 @@ function AddCompanyForm({ onCreated }: AddCompanyFormProps) {
             type="text"
             value={street}
             onChange={(event) => setStreet(event.target.value)}
-            className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+            className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
           />
           {fieldErrors.street && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.street}</p>}
         </div>
@@ -329,7 +329,7 @@ function AddCompanyForm({ onCreated }: AddCompanyFormProps) {
               type="text"
               value={city}
               onChange={(event) => setCity(event.target.value)}
-              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
             {fieldErrors.city && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.city}</p>}
           </div>
@@ -343,7 +343,7 @@ function AddCompanyForm({ onCreated }: AddCompanyFormProps) {
               value={postalCode}
               onChange={(event) => setPostalCode(event.target.value)}
               placeholder="00-000"
-              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white font-mono"
+              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 font-mono"
             />
             {fieldErrors.postalCode && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.postalCode}</p>}
           </div>

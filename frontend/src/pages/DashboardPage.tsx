@@ -156,7 +156,7 @@ export default function DashboardPage() {
             </svg>
           </div>
 
-          <div className="flex justify-between items-center text-xs font-mono text-slate-400 mt-4 border-t border-slate-100 dark:border-slate-800/50 pt-4">
+          <div className="flex justify-between items-center text-xs font-mono text-slate-400 mt-4 border-t border-slate-100 dark:border-slate-700 pt-4">
             <span>Pon</span>
             <span>Wt</span>
             <span>Śr</span>

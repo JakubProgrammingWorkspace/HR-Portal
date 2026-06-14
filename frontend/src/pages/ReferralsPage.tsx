@@ -189,9 +189,9 @@ export default function ReferralsPage() {
       {pdfError && <p className="text-sm font-medium text-brand-rust">{pdfError}</p>}
 
       {/* Table grid */}
-      <div className="overflow-hidden border border-slate-100 dark:border-slate-800/80 rounded-2xl bg-white dark:bg-slate-900 shadow-sm">
+      <div className="overflow-hidden border border-slate-100 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-900 shadow-sm">
         <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800">
-          <thead className="bg-slate-50/50 dark:bg-slate-800/20">
+          <thead className="bg-white dark:bg-slate-900/80">
             <tr>
               <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Pracownik</th>
               <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Typ badania</th>
@@ -203,7 +203,7 @@ export default function ReferralsPage() {
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {referrals.map((referral) => (
-              <tr key={referral.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+              <tr key={referral.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800 transition-colors">
                 <td className="px-6 py-4 text-sm font-semibold text-slate-800 dark:text-white">
                   {employeeNames.get(referral.employee) ?? referral.employee}
                 </td>
@@ -256,7 +256,7 @@ export default function ReferralsPage() {
             )}
           </tbody>
         </table>
-        <div className="flex items-center justify-end gap-2 px-6 py-3 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-end gap-2 px-6 py-3 border-t border-slate-100 dark:border-slate-700">
           <button
             type="button"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -386,7 +386,7 @@ function NewReferralForm({ employees, categories, onCreated }: NewReferralFormPr
   }
 
   return (
-    <div className="card-tactile p-6 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 shadow-md">
+    <div className="card-tactile p-6 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-700 shadow-md">
       <h2 className="text-lg font-bold text-slate-800 dark:text-white">Nowe skierowanie</h2>
       <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -399,7 +399,7 @@ function NewReferralForm({ employees, categories, onCreated }: NewReferralFormPr
                 id="referral-employee"
                 value={employeeId}
                 onChange={(event) => setEmployeeId(event.target.value)}
-                className="block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm appearance-none focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+                className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm appearance-none focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
               >
                 <option value="">Wybierz pracownika</option>
                 {employees.map((employee) => (
@@ -424,7 +424,7 @@ function NewReferralForm({ employees, categories, onCreated }: NewReferralFormPr
                 id="referral-examination-type"
                 value={examinationType}
                 onChange={(event) => setExaminationType(event.target.value)}
-                className="block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm appearance-none focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+                className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm appearance-none focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
               >
                 <option value="">Wybierz typ badania</option>
                 {EXAMINATION_TYPES.map((type) => (
@@ -451,7 +451,7 @@ function NewReferralForm({ employees, categories, onCreated }: NewReferralFormPr
               type="text"
               value={jobPosition}
               onChange={(event) => setJobPosition(event.target.value)}
-              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
             {fieldErrors.jobPosition && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.jobPosition}</p>}
           </div>
@@ -464,7 +464,7 @@ function NewReferralForm({ employees, categories, onCreated }: NewReferralFormPr
               type="text"
               value={issuePlace}
               onChange={(event) => setIssuePlace(event.target.value)}
-              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
             {fieldErrors.issuePlace && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.issuePlace}</p>}
           </div>
@@ -480,7 +480,7 @@ function NewReferralForm({ employees, categories, onCreated }: NewReferralFormPr
               rows={3}
               value={jobDescription}
               onChange={(event) => setJobDescription(event.target.value)}
-              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
             {fieldErrors.jobDescription && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.jobDescription}</p>}
           </div>
@@ -493,7 +493,7 @@ function NewReferralForm({ employees, categories, onCreated }: NewReferralFormPr
               type="date"
               value={issueDate}
               onChange={(event) => setIssueDate(event.target.value)}
-              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
             {fieldErrors.issueDate && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.issueDate}</p>}
           </div>
@@ -505,7 +505,7 @@ function NewReferralForm({ employees, categories, onCreated }: NewReferralFormPr
             {categories.map((category) => (
               <div
                 key={category.id}
-                className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 p-4"
+                className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4"
               >
                 <h4 className="text-sm font-bold text-slate-800 dark:text-white mb-2">
                   {category.code}. {category.name}
@@ -530,7 +530,7 @@ function NewReferralForm({ employees, categories, onCreated }: NewReferralFormPr
                             placeholder="Wielkość narażenia / wyniki pomiarów"
                             value={selectedFactors.get(factor.id) ?? ''}
                             onChange={(event) => setFactorDetails(factor.id, event.target.value)}
-                            className="mt-1 ml-6 block w-[calc(100%-1.5rem)] rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-xs focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+                            className="mt-1 ml-6 block w-[calc(100%-1.5rem)] rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-xs focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                           />
                         )}
                       </li>

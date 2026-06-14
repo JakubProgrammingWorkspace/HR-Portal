@@ -134,7 +134,7 @@ function CategoryCard({ category, onFactorAdded, onFactorRemoved }: CategoryCard
   }
 
   return (
-    <div className="card-tactile p-6 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 shadow-md flex flex-col justify-between h-full">
+    <div className="card-tactile p-6 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-700 shadow-md flex flex-col justify-between h-full">
       <div>
         <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
           <div className="w-8 h-8 rounded-lg bg-brand-moss/10 dark:bg-brand-moss/20 flex items-center justify-center text-brand-moss dark:text-brand-moss-light">
@@ -241,7 +241,7 @@ function AddFactorForm({ categoryId, onAdded }: AddFactorFormProps) {
             type="text"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-1.5 text-xs focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+            className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
           />
           {nameError && <p className="mt-1 text-[10px] text-brand-rust font-semibold">{nameError}</p>}
         </div>
@@ -254,7 +254,7 @@ function AddFactorForm({ categoryId, onAdded }: AddFactorFormProps) {
             type="text"
             value={description}
             onChange={(event) => setDescription(event.target.value)}
-            className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-1.5 text-xs focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+            className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
           />
         </div>
       </div>

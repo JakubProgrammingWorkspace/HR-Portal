@@ -188,7 +188,7 @@ export default function EmployeesPage() {
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder="Imię lub nazwisko..."
-              className="pl-10 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+              className="pl-10 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
           </div>
         </div>
@@ -201,7 +201,7 @@ export default function EmployeesPage() {
               id="employee-company-filter"
               value={companyFilter}
               onChange={(event) => setCompanyFilter(event.target.value)}
-              className="block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm appearance-none focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+              className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm appearance-none focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
             >
               <option value="">Wszystkie firmy</option>
               {companies.map((company) => (
@@ -224,10 +224,10 @@ export default function EmployeesPage() {
           ))}
         </div>
       ) : (
-        <div className="overflow-hidden border border-slate-100 dark:border-slate-800/80 rounded-2xl bg-white dark:bg-slate-900 shadow-sm">
+        <div className="overflow-hidden border border-slate-100 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-900 shadow-sm">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-800">
-              <thead className="bg-slate-50/50 dark:bg-slate-800/20">
+              <thead className="bg-white dark:bg-slate-900/80">
                 <tr>
                   <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Imię i nazwisko / PESEL</th>
                   <th className="px-6 py-4 text-left text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">Kontakt</th>
@@ -238,7 +238,7 @@ export default function EmployeesPage() {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {filteredEmployees.map((employee) => (
-                  <tr key={employee.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                  <tr key={employee.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold">
@@ -402,7 +402,7 @@ function AddEmployeeForm({ companies, onCreated }: AddEmployeeFormProps) {
   }
 
   return (
-    <div className="card-tactile p-6 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 shadow-md">
+    <div className="card-tactile p-6 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-700 shadow-md">
       <h2 className="text-lg font-bold text-slate-800 dark:text-white">Dodaj nowego pracownika</h2>
       <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -415,7 +415,7 @@ function AddEmployeeForm({ companies, onCreated }: AddEmployeeFormProps) {
               type="text"
               value={firstName}
               onChange={(event) => setFirstName(event.target.value)}
-              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
             {fieldErrors.firstName && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.firstName}</p>}
           </div>
@@ -428,7 +428,7 @@ function AddEmployeeForm({ companies, onCreated }: AddEmployeeFormProps) {
               type="text"
               value={lastName}
               onChange={(event) => setLastName(event.target.value)}
-              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
             {fieldErrors.lastName && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.lastName}</p>}
           </div>
@@ -445,7 +445,7 @@ function AddEmployeeForm({ companies, onCreated }: AddEmployeeFormProps) {
               value={pesel}
               onChange={(event) => setPesel(event.target.value)}
               placeholder="11 cyfr"
-              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white font-mono"
+              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 font-mono"
             />
             {fieldErrors.pesel && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.pesel}</p>}
           </div>
@@ -458,7 +458,7 @@ function AddEmployeeForm({ companies, onCreated }: AddEmployeeFormProps) {
               type="text"
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
-              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white font-mono"
+              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 font-mono"
             />
             {fieldErrors.phone && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.phone}</p>}
           </div>
@@ -475,7 +475,7 @@ function AddEmployeeForm({ companies, onCreated }: AddEmployeeFormProps) {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="example@mail.com"
-              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+              className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
             {fieldErrors.email && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.email}</p>}
           </div>
@@ -488,7 +488,7 @@ function AddEmployeeForm({ companies, onCreated }: AddEmployeeFormProps) {
                 id="employee-company"
                 value={companyId}
                 onChange={(event) => setCompanyId(event.target.value)}
-                className="block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm appearance-none focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+                className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm appearance-none focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
               >
                 <option value="">Wybierz firmę</option>
                 {companies.map((company) => (
@@ -514,7 +514,7 @@ function AddEmployeeForm({ companies, onCreated }: AddEmployeeFormProps) {
             type="text"
             value={address}
             onChange={(event) => setAddress(event.target.value)}
-            className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white"
+            className="mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
           />
           {fieldErrors.address && <p className="mt-1 text-xs text-brand-rust font-medium">{fieldErrors.address}</p>}
         </div>

@@ -56,7 +56,7 @@ export default function LoginPage() {
 
       {/* Right panel - Form */}
       <div className="w-full lg:w-2/5 flex items-center justify-center p-6 md:p-12">
-        <div className="w-full max-w-md card-tactile p-8 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 shadow-xl">
+        <div className="w-full max-w-md card-tactile p-8 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-700 shadow-xl">
           <div className="text-center">
             <h2 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-white">Witaj ponownie</h2>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
@@ -81,7 +81,7 @@ export default function LoginPage() {
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     placeholder="name@company.com"
-                    className="pl-10 mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2.5 text-sm shadow-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:focus:ring-brand-moss-light/20 transition-all dark:text-white"
+                    className="pl-10 mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm shadow-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:focus:ring-brand-moss-light/20 transition-all dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                 </div>
               </div>
@@ -101,7 +101,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     placeholder="••••••••"
-                    className="pl-10 mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2.5 text-sm shadow-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:focus:ring-brand-moss-light/20 transition-all dark:text-white"
+                    className="pl-10 mt-1 block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm shadow-sm focus:border-brand-moss focus:outline-none focus:ring-2 focus:ring-brand-moss/10 dark:focus:ring-brand-moss-light/20 transition-all dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                 </div>
               </div>
