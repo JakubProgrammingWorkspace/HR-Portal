@@ -128,8 +128,8 @@ export default function DashboardPage() {
             <svg className="w-full h-full overflow-visible" viewBox="0 0 700 150">
               <defs>
                 <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#2E4036" stopOpacity="0.25" />
-                  <stop offset="100%" stopColor="#2E4036" stopOpacity="0.0" />
+                  <stop offset="0%" stopColor="#276648" stopOpacity="0.25" />
+                  <stop offset="100%" stopColor="#276648" stopOpacity="0.0" />
                 </linearGradient>
               </defs>
               {/* Grid Lines */}
@@ -146,13 +146,13 @@ export default function DashboardPage() {
               <path 
                 d="M0,110 Q50,115 100,120 T200,80 T300,105 T400,40 T500,90 T600,30 T700,45" 
                 fill="none" 
-                stroke="#2E4036" 
+                stroke="#276648"
                 strokeWidth="3.5" 
                 strokeLinecap="round"
               />
               {/* Interactive Dots */}
-              <circle cx="400" cy="40" r="5" fill="#2E4036" stroke="#ffffff" strokeWidth="2" />
-              <circle cx="600" cy="30" r="5" fill="#2E4036" stroke="#ffffff" strokeWidth="2" />
+              <circle cx="400" cy="40" r="5" fill="#276648" stroke="#ffffff" strokeWidth="2" />
+              <circle cx="600" cy="30" r="5" fill="#276648" stroke="#ffffff" strokeWidth="2" />
             </svg>
           </div>
 
