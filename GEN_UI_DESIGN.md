@@ -14,15 +14,15 @@ Define these variables in your root element:
 ```css
 :root {
   /* Colors */
-  --color-bg-app: #FAF9F5;          /* Off-white/cream canvas background */
+  --color-bg-app: #FFFEF9;          /* Brand Cream canvas background */
   --color-bg-card: #FFFFFF;         /* Solid white for panels */
-  --color-text-primary: #1E293B;    /* Charcoal/Slate for primary text and headings */
-  --color-text-secondary: #64748B;  /* Muted slate for subtext and descriptors */
+  --color-text-primary: #111827;    /* Near-black for primary text and headings */
+  --color-text-secondary: #475569;  /* Slate-600 for subtext and descriptors */
   
-  --color-accent-primary: #2E4036;  /* Forest Moss (Main interactive accent) */
-  --color-accent-hover: #445D4F;    /* Softened Moss for hover states */
-  --color-accent-danger: #CC5833;   /* Muted Rust/Coral for deletes/alerts */
-  --color-accent-danger-hover: #A03C1E;
+  --color-accent-primary: #276648;  /* Brand Moss (Main interactive accent) */
+  --color-accent-hover: #38A169;    /* Brand Moss Light for hover states */
+  --color-accent-danger: #E0603E;   /* Brand Rust for deletes/alerts */
+  --color-accent-danger-hover: #B04224; /* Darkened Rust (derived) */
   
   --color-border-subtle: rgba(226, 232, 240, 0.6); /* Soft boundary borders */
   
@@ -33,20 +33,22 @@ Define these variables in your root element:
   /* Radii & Shadows */
   --radius-container: 1.5rem;       /* 24px - for major cards/sections */
   --radius-element: 0.75rem;        /* 12px - for buttons/inputs */
-  --shadow-tactile: 0 10px 30px -15px rgba(0, 0, 0, 0.03);
-  --shadow-tactile-hover: 0 20px 40px -20px rgba(0, 0, 0, 0.06);
+  --shadow-tactile: 0 10px 30px -15px rgba(0, 0, 0, 0.05);
+  --shadow-tactile-hover: 0 20px 40px -20px rgba(0, 0, 0, 0.08);
 }
 
 /* Dark Mode Implementation */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg-app: #0F172A;          /* Deep Slate */
-    --color-bg-card: #1E293B;         /* Slate Card */
-    --color-text-primary: #F8FAFC;    
+    --color-bg-app: #141823;          /* Deep Navy */
+    --color-bg-card: #1C2236;         /* Navy Card */
+    --color-text-primary: #F9FAFB;    
     --color-text-secondary: #94A3B8;  
+    --color-accent-primary: #22C55E;  /* Brighter Moss for dark mode */
+    --color-accent-hover: #4ADE80;    /* Brighter Moss Light for dark mode */
     --color-border-subtle: rgba(255, 255, 255, 0.1);
-    --shadow-tactile: 0 10px 30px -15px rgba(0, 0, 0, 0.3);
-    --shadow-tactile-hover: 0 20px 40px -20px rgba(0, 0, 0, 0.5);
+    --shadow-tactile: 0 10px 30px -15px rgba(0, 0, 0, 0.4);
+    --shadow-tactile-hover: 0 20px 40px -20px rgba(0, 0, 0, 0.6);
   }
 }
 ```
@@ -153,7 +155,7 @@ Make main display cards feel like physical items:
 .card-tactile:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-tactile-hover);
-  border-color: rgba(46, 64, 54, 0.15);
+  border-color: rgba(39, 102, 72, 0.15);
 }
 ```
 
@@ -173,7 +175,7 @@ Forms should avoid basic box borders. Instead, make them respond immediately to 
   background-color: #ffffff;
   border-color: var(--color-accent-primary);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(46, 64, 54, 0.08);
+  box-shadow: 0 0 0 3px rgba(39, 102, 72, 0.08);
 }
 ```
 
@@ -225,7 +227,7 @@ Buttons must feel magnetic and reactive:
 }
 .btn-primary:hover {
   background-color: var(--color-accent-hover);
-  box-shadow: 0 4px 12px rgba(46, 64, 54, 0.15);
+  box-shadow: 0 4px 12px rgba(39, 102, 72, 0.15);
 }
 
 /* Danger / Delete button */
@@ -235,7 +237,7 @@ Buttons must feel magnetic and reactive:
 }
 .btn-danger:hover {
   background-color: var(--color-accent-danger-hover);
-  box-shadow: 0 4px 12px rgba(204, 88, 51, 0.15);
+  box-shadow: 0 4px 12px rgba(224, 96, 62, 0.15);
 }
 ```
 
