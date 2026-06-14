@@ -32,15 +32,14 @@ export default function LoginPage() {
       {/* Left panel - Branding (Desktop only) */}
       <div className="hidden lg:flex lg:w-3/5 bg-brand-moss dark:bg-slate-900 text-white p-12 flex-col justify-between relative overflow-hidden">
         {/* Glow overlay */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.15),transparent_60%)]"></div>
-        
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(176,141,87,0.16),transparent_60%)]"></div>
+
         <div className="flex items-center gap-2 relative z-10">
-          <div className="w-8 h-8 rounded-lg bg-white/10 backdrop-blur-md flex items-center justify-center font-bold">H</div>
-          <span className="text-xl font-bold tracking-tight">HR-Portal</span>
+          <span className="font-serif text-xl font-semibold tracking-tight">HR<span className="text-brand-gold">·</span>Portal</span>
         </div>
 
         <div className="max-w-md relative z-10 my-auto">
-          <h1 className="text-4xl font-extrabold tracking-tight leading-none">
+          <h1 className="font-serif text-4xl font-semibold tracking-tight leading-tight">
             Zarządzanie kadrami na wyższym poziomie.
           </h1>
           <p className="mt-4 text-slate-300 font-sans tracking-wide">
@@ -58,7 +57,7 @@ export default function LoginPage() {
       <div className="w-full lg:w-2/5 flex items-center justify-center p-6 md:p-12">
         <div className="w-full max-w-md card-tactile p-8 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-700 shadow-xl">
           <div className="text-center">
-            <h2 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-white">Witaj ponownie</h2>
+            <h2 className="font-serif text-3xl font-semibold tracking-tight text-slate-800 dark:text-white">Witaj ponownie</h2>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
               Zaloguj się do swojego konta administracyjnego
             </p>

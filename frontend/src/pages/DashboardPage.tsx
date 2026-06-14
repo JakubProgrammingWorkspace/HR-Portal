@@ -76,7 +76,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8 animate-fade-in">
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-white">Dashboard</h1>
+        <h1 className="font-serif text-3xl font-semibold tracking-tight text-slate-800 dark:text-white">Dashboard</h1>
         <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Podsumowanie statystyk i operacji systemowych HR-Portal.</p>
       </div>
 
@@ -118,7 +118,7 @@ export default function DashboardPage() {
         <div className="card-tactile p-6 bg-white dark:bg-slate-900 lg:col-span-2 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-800 dark:text-white">Aktywność systemu</h2>
+              <h2 className="font-serif text-lg font-semibold text-slate-800 dark:text-white">Aktywność systemu</h2>
               <span className="text-xs text-slate-400 font-mono">Ostatnie 7 dni</span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Liczba wygenerowanych dokumentów i skierowań.</p>
@@ -128,8 +128,8 @@ export default function DashboardPage() {
             <svg className="w-full h-full overflow-visible" viewBox="0 0 700 150">
               <defs>
                 <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#276648" stopOpacity="0.25" />
-                  <stop offset="100%" stopColor="#276648" stopOpacity="0.0" />
+                  <stop offset="0%" stopColor="#1F4231" stopOpacity="0.25" />
+                  <stop offset="100%" stopColor="#1F4231" stopOpacity="0.0" />
                 </linearGradient>
               </defs>
               {/* Grid Lines */}
@@ -146,13 +146,13 @@ export default function DashboardPage() {
               <path 
                 d="M0,110 Q50,115 100,120 T200,80 T300,105 T400,40 T500,90 T600,30 T700,45" 
                 fill="none" 
-                stroke="#276648"
+                stroke="#1F4231"
                 strokeWidth="3.5" 
                 strokeLinecap="round"
               />
               {/* Interactive Dots */}
-              <circle cx="400" cy="40" r="5" fill="#276648" stroke="#ffffff" strokeWidth="2" />
-              <circle cx="600" cy="30" r="5" fill="#276648" stroke="#ffffff" strokeWidth="2" />
+              <circle cx="400" cy="40" r="5" fill="#1F4231" stroke="#ffffff" strokeWidth="2" />
+              <circle cx="600" cy="30" r="5" fill="#1F4231" stroke="#ffffff" strokeWidth="2" />
             </svg>
           </div>
 
@@ -208,7 +208,7 @@ function StatCard({ title, value, subtext, icon: Icon, color }: StatCardProps) {
     <div className="card-tactile p-6 bg-white dark:bg-slate-900 flex items-center justify-between group">
       <div className="space-y-2">
         <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">{title}</span>
-        <h3 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-white group-hover:scale-105 transition-transform origin-left duration-300">
+        <h3 className="font-serif text-3xl font-semibold tracking-tight text-slate-800 dark:text-white group-hover:scale-105 transition-transform origin-left duration-300">
           {value}
         </h3>
         <p className="text-xs text-slate-500 dark:text-slate-400">{subtext}</p>

@@ -149,7 +149,7 @@ export default function EmployeesPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-white">Pracownicy</h1>
+          <h1 className="font-serif text-3xl font-semibold tracking-tight text-slate-800 dark:text-white">Pracownicy</h1>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Zarządzanie kartotekami i danymi kontaktowymi pracowników.</p>
         </div>
         <button
@@ -403,7 +403,7 @@ function AddEmployeeForm({ companies, onCreated }: AddEmployeeFormProps) {
 
   return (
     <div className="card-tactile p-6 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-700 shadow-md">
-      <h2 className="text-lg font-bold text-slate-800 dark:text-white">Dodaj nowego pracownika</h2>
+      <h2 className="font-serif text-lg font-semibold text-slate-800 dark:text-white">Dodaj nowego pracownika</h2>
       <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>

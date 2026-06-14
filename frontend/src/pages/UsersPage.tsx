@@ -160,7 +160,7 @@ export default function UsersPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-white">Użytkownicy</h1>
+          <h1 className="font-serif text-3xl font-semibold tracking-tight text-slate-800 dark:text-white">Użytkownicy</h1>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Zarządzanie uprawnieniami, rolami oraz statusem aktywności użytkowników systemu.</p>
         </div>
         <button
@@ -340,7 +340,7 @@ function AddUserModal({ roles, onClose, onCreated }: AddUserModalProps) {
           <X className="w-4 h-4" />
         </button>
 
-        <h2 className="text-xl font-bold text-slate-800 dark:text-white">Nowy Użytkownik Systemu</h2>
+        <h2 className="font-serif text-xl font-semibold text-slate-800 dark:text-white">Nowy Użytkownik Systemu</h2>
         <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
           <div>
             <label htmlFor="new-user-email" className="block text-sm font-medium text-slate-700 dark:text-slate-300">

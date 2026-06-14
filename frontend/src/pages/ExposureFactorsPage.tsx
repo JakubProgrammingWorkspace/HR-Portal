@@ -79,7 +79,7 @@ export default function ExposureFactorsPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-white">Czynniki Narażeń</h1>
+        <h1 className="font-serif text-3xl font-semibold tracking-tight text-slate-800 dark:text-white">Czynniki Narażeń</h1>
         <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Katalog czynników szkodliwych i niebezpiecznych w środowisku pracy.</p>
       </div>
 
@@ -140,7 +140,7 @@ function CategoryCard({ category, onFactorAdded, onFactorRemoved }: CategoryCard
           <div className="w-8 h-8 rounded-lg bg-brand-moss/10 dark:bg-brand-moss/20 flex items-center justify-center text-brand-moss dark:text-brand-moss-light">
             <Shield className="w-4.5 h-4.5" />
           </div>
-          <h2 className="text-md font-bold text-slate-800 dark:text-white">
+          <h2 className="font-serif text-md font-semibold text-slate-800 dark:text-white">
             {category.code}. {category.name}
           </h2>
         </div>
