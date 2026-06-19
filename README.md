@@ -1,16 +1,34 @@
 # HR-Portal
 
-A Polish HR management application (Users & flexible Roles, Companies, Employees, an
-occupational exposure factors catalogue, and standardized medical examination referrals
-with PDF generation), built with a Symfony 6 + API Platform backend (PHP 8.5, thick
-services / thin controllers) and a React + Tailwind CSS frontend.
+A Polish HR management application covering **Users & flexible Roles**, **Companies**, **Employees**, an **occupational exposure factors catalogue**, and **standardized medical examination referrals with PDF generation**. Built with a **Symfony 6 + API Platform** backend (PHP 8.5, thick services / thin controllers) and a **React + Tailwind CSS** frontend, all running via Docker Compose.
+
+> [!TIP]
+> **💡 Training project** — This app was built as a **training experiment** to test whether complex, real-world applications can be created from a specification alone using AI coding agents. It demonstrates that with a clear PRD (product requirements document) and two autonomous AI agents working in tandem, a full-stack HR application is feasible with no upfront code — just a specification.
+
+## How it was built: Claude Code + Ralph
+
+This project was developed using two AI coding agents working together:
+
+| Agent | Role |
+|-------|------|
+| **[Claude Code](https://claude.ai/code)** | Front-end design agent — responsible for the UI redesign, visual identity, and Polish "Organic Tech" design system (typography, color palette, floating sidebar, tables, forms, dashboard, login page). |
+| **[Ralph](https://github.com/earendil-works/ralph)** | Autonomous backend agent — a structured iteration loop agent that reads a PRD file (`prd.json`), picks the highest-priority user story with `passes: false`, implements it, runs quality checks, updates the PRD, and appends learnings to `progress.txt`. |
+
+The workflow:
+
+1. A **PRD** (`prd.json`) defines all user stories, acceptance criteria, priorities, and iteration state (`passes: true/false`).
+2. **Ralph** iterates through stories one-by-one, implementing each, checking quality, and committing.
+3. **Claude Code** handles the visual redesign — typography, color system, components, pages, and micro-interactions.
+4. A `progress.txt` log accumulates learnings, patterns, and gotchas across iterations so future runs don't repeat mistakes.
+
+This project proves that specifying what you want — and letting AI agents build it — is a viable workflow for building real applications.
 
 ## Stack
 
-- **php** - PHP 8.5-FPM running the Symfony 6 backend (`backend/`)
-- **nginx** - serves the backend on `http://localhost:8000`
-- **postgres** - PostgreSQL 16 database
-- **node** - Vite dev server for the React frontend (`frontend/`), on `http://localhost:5173`
+- **php** — PHP 8.5-FPM running the Symfony 6 backend (`backend/`)
+- **nginx** — serves the backend on `http://localhost:8000`
+- **postgres** — PostgreSQL 16 database
+- **node** — Vite dev server for the React frontend (`frontend/`), on `http://localhost:5173`
 
 ## Getting started
 
