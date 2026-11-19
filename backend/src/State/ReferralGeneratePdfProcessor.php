@@ -18,8 +18,6 @@ class ReferralGeneratePdfProcessor implements ProcessorInterface
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): Referral
     {
-        \assert($data instanceof Referral);
-
         return $this->referralService->generatePdf($data);
     }
 }

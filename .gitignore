@@ -1,5 +1,6 @@
 # Environment
 .env
+!backend/.env
 .env.local
 
 # Backend (Symfony)
@@ -18,3 +19,10 @@ frontend/dist/
 
 # Tooling
 .playwright-cli/
+
+# Agent workflow runtime artifacts
+docs/agent-workflow/.last-branch
+docs/agent-workflow/archive/
+
+# Local AI tooling
+.claude/

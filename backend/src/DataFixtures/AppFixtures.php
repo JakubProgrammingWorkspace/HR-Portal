@@ -7,11 +7,25 @@ use App\Entity\ExposureFactor;
 use App\Entity\Role;
 use App\Entity\User;
 use Doctrine\Bundle\FixturesBundle\Fixture;
+use Doctrine\Bundle\FixturesBundle\FixtureGroupInterface;
 use Doctrine\Persistence\ObjectManager;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-class AppFixtures extends Fixture
+/**
+ * Base data required to run the app: roles, admin user, exposure factors catalogue.
+ * Load with: bin/console doctrine:fixtures:load --group=base
+ */
+class AppFixtures extends Fixture implements FixtureGroupInterface
 {
+    public const ADMIN_REFERENCE = 'user-admin';
+    public const USER_ROLE_REFERENCE = 'role-user';
+    public const FACTOR_REFERENCE_PREFIX = 'factor-';
+
+    public static function getGroups(): array
+    {
+        return ['base'];
+    }
+
     /**
      * @var array<string, array{name: string, factors: list<string>}>
      */
@@ -106,6 +120,7 @@ class AppFixtures extends Fixture
         $userRole->setCode('ROLE_USER');
         $userRole->setName('Użytkownik');
         $manager->persist($userRole);
+        $this->addReference(self::USER_ROLE_REFERENCE, $userRole);
 
         $admin = new User();
         $admin->setEmail('admin@hr-portal.local');
@@ -114,6 +129,7 @@ class AppFixtures extends Fixture
         $admin->addRoleEntity($adminRole);
         $admin->setPassword($this->passwordHasher->hashPassword($admin, 'admin123'));
         $manager->persist($admin);
+        $this->addReference(self::ADMIN_REFERENCE, $admin);
 
         $sortOrder = 1;
         foreach (self::EXPOSURE_CATEGORIES as $code => $data) {
@@ -128,6 +144,7 @@ class AppFixtures extends Fixture
                 $factor->setName($factorName);
                 $factor->setCategory($category);
                 $manager->persist($factor);
+                $this->addReference(self::FACTOR_REFERENCE_PREFIX.$factorName, $factor);
             }
         }
 
